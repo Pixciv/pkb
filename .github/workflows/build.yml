@@ -36,13 +36,17 @@ jobs:
       run: |
         if [ ! -f buildozer.spec ]; then
           buildozer init
-          # App adı, paket adı ve versiyon otomatik ayarlanıyor
           sed -i 's/^title = .*/title = MyApp/' buildozer.spec
           sed -i 's/^package.name = .*/package.name = com.example.myapp/' buildozer.spec
           sed -i 's/^package.domain = .*/package.domain = org.example/' buildozer.spec
           sed -i 's/^version = .*/version = 0.1/' buildozer.spec
           sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
+          sed -i 's/^android.build_tools = .*/android.build_tools = 36.0.0/' buildozer.spec
         fi
+
+    - name: Accept Android SDK licenses
+      run: |
+        yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build debug APK
       run: |
