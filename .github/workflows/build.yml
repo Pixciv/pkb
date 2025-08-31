@@ -1,4 +1,4 @@
-name: Build Kivy APK
+name: Auto Build Kivy APK
 
 on:
   push:
@@ -32,12 +32,28 @@ jobs:
         pip install --upgrade pip
         pip install cython==0.29.36 kivy==2.3.1 buildozer==1.5.0
 
-    - name: Build APK with Buildozer
+    - name: Initialize buildozer.spec if missing
       run: |
-        buildozer android debug || buildozer android debug deploy run
+        if [ ! -f buildozer.spec ]; then
+          buildozer init
+          # App adı, paket adı ve versiyon otomatik ayarlanıyor
+          sed -i 's/^title = .*/title = MyApp/' buildozer.spec
+          sed -i 's/^package.name = .*/package.name = com.example.myapp/' buildozer.spec
+          sed -i 's/^package.domain = .*/package.domain = org.example/' buildozer.spec
+          sed -i 's/^version = .*/version = 0.1/' buildozer.spec
+          sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
+        fi
+
+    - name: Build debug APK
+      run: |
+        buildozer android debug
+
+    - name: Rename APK to fixed name
+      run: |
+        mv bin/*.apk bin/MyApp-debug.apk || true
 
     - name: Upload debug APK
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk
-        path: bin/*.apk
+        name: MyApp-debug-apk
+        path: bin/MyApp-debug.apk
