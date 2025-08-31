@@ -42,6 +42,8 @@ jobs:
           sed -i 's/^version = .*/version = 0.1/' buildozer.spec
           sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
           sed -i 's/^android.build_tools = .*/android.build_tools = 36.0.0/' buildozer.spec
+          sed -i 's/^android.sdk = .*/android.sdk = 30/' buildozer.spec
+          sed -i 's/^android.ndk = .*/android.ndk = 25b/' buildozer.spec
         fi
 
     - name: Accept Android SDK licenses
