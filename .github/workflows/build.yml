@@ -30,11 +30,10 @@ jobs:
     - name: Install Kivy and Buildozer
       run: |
         pip install --upgrade pip
-        pip install cython==0.29.36 kivy==2.3.1 buildozer==1.4.7
+        pip install cython==0.29.36 kivy==2.3.1 buildozer==1.5.0
 
     - name: Build APK with Buildozer
       run: |
-        # Debug APK üretimi
         buildozer android debug || buildozer android debug deploy run
 
     - name: Upload debug APK
