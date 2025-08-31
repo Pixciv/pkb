@@ -48,7 +48,13 @@ jobs:
 
     - name: Accept Android SDK licenses
       run: |
-        yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        yes | sdkmanager --licenses
+
+    - name: Ensure build-tools are installed
+      run: |
+        sdkmanager "build-tools;36.0.0" "platforms;android-30"
 
     - name: Build debug APK
       run: |
