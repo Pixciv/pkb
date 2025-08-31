@@ -43,7 +43,7 @@ jobs:
           sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
           sed -i 's/^android.build_tools = .*/android.build_tools = 36.0.0/' buildozer.spec
           sed -i 's/^android.sdk = .*/android.sdk = 30/' buildozer.spec
-          sed -i 's/^android.ndk = .*/android.ndk = 25b/' buildozer.spec
+          sed -i 's/^android.ndk = .*/android.ndk = 25.2.9519653/' buildozer.spec
         fi
 
     - name: Set up Android SDK and accept licenses
@@ -75,8 +75,12 @@ jobs:
         # PATH'i güncelle
         export PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$PATH
         
-        # Gerekli bileşenleri kur (yes komutu ile lisansları otomatik kabul et)
-        yes | sdkmanager --sdk_root=$ANDROID_HOME "build-tools;36.0.0" "platforms;android-30" "platform-tools" "ndk;25b"
+        # Mevcut NDK versiyonlarını listeleyelim
+        echo "Available NDK versions:"
+        sdkmanager --sdk_root=$ANDROID_HOME --list | grep "ndk;" || true
+        
+        # Gerekli bileşenleri kur (daha yeni bir NDK versiyonu kullanalım)
+        yes | sdkmanager --sdk_root=$ANDROID_HOME "build-tools;36.0.0" "platforms;android-30" "platform-tools" "ndk;25.2.9519653"
 
     - name: Build debug APK
       run: |
