@@ -47,14 +47,17 @@ jobs:
         sed -i 's/^android.api = .*/android.api = 33/' buildozer.spec
         sed -i 's/^android.sdk = .*/android.sdk = 30/' buildozer.spec
         sed -i 's/^android.ndk = .*/android.ndk = 25b/' buildozer.spec
+        # Use a stable, not a pre-release, version of build-tools
         sed -i 's/^android.build_tools = .*/android.build_tools = 33.0.0/' buildozer.spec
 
     - name: Build debug APK
       run: |
         # Override the path for sdkmanager with the new one
-        # This is the key change to fix the error.
         export PATH=$HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin:$PATH
-        # Buildozer will now use the correct path to download and install its SDK components.
+        # Force-accept all licenses before the build starts.
+        yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        
+        # Now, proceed with the build
         buildozer -v android debug
 
     - name: Rename APK to a fixed name
