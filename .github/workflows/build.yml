@@ -48,46 +48,28 @@ jobs:
 
     - name: Set up Android SDK and accept licenses
       run: |
-        # Önce dizinleri oluştur
-        mkdir -p ~/.android/licenses
-        mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-        
-        # Tüm lisansları otomatik olarak kabul et
-        echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.android/licenses/android-sdk-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.android/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > ~/.android/licenses/android-sdk-preview-license
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ~/.android/licenses/android-sdk-preview-license
-        
-        # Buildozer için lisans dosyalarını da oluştur
-        echo -e "8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-        echo -e "84831b9409646a918e30573bab4c9c91346d8abd\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
-
-    - name: Install Android SDK components
-      run: |
+        # SDK'yı Buildozer'ın varsayılan yoluna kur
         export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-        
-        # SDK Manager'ı kur
+
+        # SDK Manager'ı indir ve doğru dizine aç
         wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
         mkdir -p $ANDROID_HOME/cmdline-tools
         unzip cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/tools
-        
-        # PATH'i güncelle
-        export PATH=$ANDROID_HOME/cmdline-tools/tools/bin:$PATH
-        
-        # Mevcut NDK versiyonlarını listeleyelim
-        echo "Available NDK versions:"
-        sdkmanager --sdk_root=$ANDROID_HOME --list | grep "ndk;" || true
-        
-        # Gerekli bileşenleri kur (daha yeni bir NDK versiyonu kullanalım)
-        yes | sdkmanager --sdk_root=$ANDROID_HOME "build-tools;36.0.0" "platforms;android-30" "platform-tools" "ndk;25.2.9519653"
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+
+        # SDK Manager'ı PATH'e ekle
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+
+        # Lisansları otomatik kabul et
+        mkdir -p $ANDROID_HOME/licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
     - name: Build debug APK
       run: |
-        # Buildozer'ı verbose mode ile çalıştır
+        # Buildozer'ı verbose modda çalıştır
         buildozer -v android debug
 
-    - name: Rename APK to fixed name
+    - name: Rename APK to a fixed name
       run: |
         mv bin/*.apk bin/MyApp-debug.apk || true
 
