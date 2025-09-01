@@ -7,18 +7,19 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Ubuntu 22.04 varsayılan, uyumlu
+    timeout-minutes: 60
 
     steps:
     # 1️⃣ Checkout
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # 2️⃣ Python kurulumu
+    # 2️⃣ Python kurulumu (doğru sürüm)
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.10
+        python-version: '3.10'
 
     # 3️⃣ Gerekli paketler
     - name: Install Briefcase
@@ -33,7 +34,7 @@ jobs:
         echo 'def main():\n    print("Hello BeeWare!")\n\nif __name__ == "__main__":\n    main()' > app/__main__.py
         echo '[tool.briefcase]\nproject_name = "HelloBeeWare"\nbundle = "org.example"\nversion = "0.1.0"\nauthor = "GitHub Actions"\ndescription = "Auto generated BeeWare app"\nrequires = [""]' > pyproject.toml
 
-    # 5️⃣ Android build
+    # 5️⃣ Android proje oluştur ve build et
     - name: Build Android APK
       run: |
         briefcase create android
