@@ -30,12 +30,27 @@ jobs:
             build-essential \
             libssl-dev libffi-dev \
             libgl1-mesa-dev libgles2-mesa-dev \
-            libsqlite3-dev zlib1g-dev
+            libsqlite3-dev zlib1g-dev curl
 
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
           pip install buildozer cython==0.29.36
+
+      - name: Download Android SDK cmdline-tools
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip commandlinetools.zip -d latest
+          rm commandlinetools.zip
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+
+      - name: Accept Android SDK Licenses
+        run: |
+          sdkmanager --sdk_root=$HOME/android-sdk --licenses <<< "y"
+          sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-30" "build-tools;33.0.2"
 
       - name: Create buildozer.spec if missing
         run: |
@@ -48,11 +63,6 @@ jobs:
             sed -i 's/^version = .*/version = 0.1/' buildozer.spec
             echo "✅ buildozer.spec created"
           fi
-
-      - name: Accept Android SDK Licenses
-        run: |
-          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;33.0.2"
 
       - name: Build APK
         run: |
