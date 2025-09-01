@@ -16,17 +16,16 @@ source.dir = .
 source.main = main.py
 
 # (list) Application requirements
-# örnek: kivy, requests
 requirements = python3,kivy==2.2.1,requests
 
 # (str) Icon of the app
 icon.filename = %(source.dir)s/icon.png
 
-# (str) Supported orientation (landscape, portrait)
-orientation = portrait
-
 # (str) Presplash / splash image
 presplash.filename = %(source.dir)s/presplash.png
+
+# (str) Supported orientation (landscape, portrait)
+orientation = portrait
 
 # (list) Permissions
 android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE
@@ -36,9 +35,6 @@ android.minapi = 21
 
 # (int) Target API
 android.target = 33
-
-# (str) Gradle version
-android.gradle_dependencies =
 
 # (bool) Copy assets directory
 copy_assets = 1
@@ -50,5 +46,13 @@ exclude_patterns = *.pyc, *.pyo, *.swp, .git, .github
 android.private_storage = True
 
 # (str) Python version to use
-# Buildozer default 3.10, Github Actions ile uyumlu
 python.version = 3.10
+
+# (str) Version of your app
+version = 1.0.0
+
+# (str) Optional version regex if otomatik version almak istiyorsan
+# version.regex = ...
+
+# (str) Gradle dependencies (örnek)
+# android.gradle_dependencies = 'com.android.support:appcompat-v7:28.0.0'
