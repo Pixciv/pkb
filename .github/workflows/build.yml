@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
+      # Checkout repository
       - uses: actions/checkout@v3
 
-      # 2️⃣ Cache Buildozer directories
+      # Cache Buildozer directories to speed up builds
       - name: Cache Buildozer global directory
         uses: actions/cache@v3
         with:
@@ -28,79 +28,39 @@ jobs:
           path: .buildozer
           key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
 
-      # 3️⃣ Install system dependencies (eklenen paketlerle)
+      # Install system dependencies
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            m4 \
-            libffi-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            zlib1g-dev \
-            build-essential \
-            git \
-            python3-dev \
-            python3-pip \
-            unzip \
-            zip \
-            libssl-dev \
-            ffmpeg \
-            libsdl2-dev \
-            libsdl2-image-dev \
-            libsdl2-mixer-dev \
-            libsdl2-ttf-dev \
-            libportmidi-dev \
-            libswscale-dev \
-            libavformat-dev \
-            libavcodec-dev \
-            libunwind-dev \
-            libsqlite3-dev \
-            sqlite3 \
-            bzip2 \
-            libbz2-dev \
-            openssl \
-            libgdbm-dev \
-            libgdbm-compat-dev \
-            liblzma-dev \
-            libreadline-dev \
-            uuid-dev \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            gstreamer1.0-plugins-bad \
-            gstreamer1.0-plugins-ugly \
-            gstreamer1.0-libav \
-            gstreamer1.0-tools \
-            cmake \
-            libncurses6 \
-            openjdk-17-jdk \
-            wget \
-            curl
+            build-essential git ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libunwind-dev zlib1g-dev \
+            libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev openssl libgdbm-dev libgdbm-compat-dev \
+            liblzma-dev libreadline-dev uuid-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools \
+            zip unzip autoconf libtool pkg-config libncurses6 cmake libffi-dev libssl-dev automake \
+            m4 libncurses5-dev libncursesw5-dev python3-dev python3-pip openjdk-17-jdk wget curl
 
-      # 4️⃣ Setup Java 17
+      # Setup Java 17
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 5️⃣ Setup Python
+      # Setup Python
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      # 6️⃣ Upgrade pip & install Buildozer and Cython
+      # Upgrade pip and install Buildozer, Cython, and python-for-android
       - name: Install pip dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install buildozer cython==0.29.33
+          pip install --upgrade buildozer cython==0.29.33 python-for-android
 
-      # 7️⃣ Install Android SDK & accept licenses
+      # Install Android SDK & accept licenses
       - name: Install Android SDK & accept licenses
         run: |
           mkdir -p $HOME/android-sdk
@@ -112,16 +72,22 @@ jobs:
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-30" "build-tools;33.0.2"
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # 8️⃣ Build APK
+      # Set environment variables for NDK/SDK
+      - name: Export environment variables
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "ANDROID_NDK=/usr/local/lib/android/sdk/ndk/27.3.13750724" >> $GITHUB_ENV
+
+      # Build the APK
       - name: Build APK
         run: |
-          yes | buildozer -v android debug
+          yes | buildozer -v android debug log_level=2
 
-      # 9️⃣ Upload APK
+      # Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyKivyApp-APK
+          name: package
           path: bin/*.apk
