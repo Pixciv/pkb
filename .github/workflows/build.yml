@@ -1,60 +1,55 @@
-name: 'Kivy App to APK'
-description: 'Convert Kivy app to APK'
+name: Build APK
 
-inputs:
-  python-version:
-    description: 'Python version to use'
-    default: '3.8'
-  work-dir:
-    default: '.'
-    description: 'Working directory'
-  buildozer-cmd:
-    default: 'buildozer android debug'
-    description: 'Buildozer command to use'
+on:
+  push:
+    branches: [ main ]
 
-branding:
-  color: 'green'
-  icon: 'play'
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-runs:
-  using: "composite"
-  steps:
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ inputs.python-version }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Setup Java 17 required by Gradle
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            python3.10 \
+            python3.10-dev \
+            python3-pip \
+            libffi-dev \
+            libssl-dev \
+            libsqlite3-dev \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            libreadline-dev \
+            libgdbm-dev \
+            libbz2-dev \
+            liblzma-dev \
+            libsndfile1
 
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y git zip unzip openjdk-17-jdk \
-          python3-pip autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libncursesw5-dev libtinfo5 cmake \
-          libffi-dev libssl-dev
-        python3 -m pip install --upgrade pip
-        python3 -m pip install Cython==0.29.33 buildozer
-      shell: bash
+      - name: Clone Buildozer
+        run: |
+          git clone https://github.com/kivy/buildozer.git
+          cd buildozer
+          pip install -e .
 
-    - name: Install requirements.txt (if exists)
-      run: |
-        if [ -f requirements.txt ]; then
-          pip install -r requirements.txt
-        fi
-      working-directory: ${{ inputs.work-dir }}
-      shell: bash
+      - name: Install Cython
+        run: pip install Cython==0.29.33
 
-    - name: Accept Android SDK licenses
-      run: |
-        yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-      shell: bash
+      - name: Build APK
+        run: buildozer -v android debug
 
-    - name: Build with Buildozer
-      run: ${{ inputs.buildozer-cmd }}
-      working-directory: ${{ inputs.work-dir }}
-      shell: bash
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: bin/*.apk
