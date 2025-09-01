@@ -34,8 +34,8 @@ jobs:
         # Python ana dosyası
         printf "def main():\n    print(\"Hello BeeWare!\")\n\nif __name__ == \"__main__\":\n    main()\n" > app/__main__.py
 
-        # pyproject.toml (TOML formatına dikkat!)
-        printf "[tool.briefcase]\nproject_name = \"HelloBeeWare\"\nbundle = \"org.example\"\nversion = \"0.1.0\"\nauthor = \"GitHub Actions\"\ndescription = \"Auto generated BeeWare app\"\nrequires = []\n" > pyproject.toml
+        # pyproject.toml (TOML uyumlu ve app tanımı ekli)
+        printf "[tool.briefcase]\nproject_name = \"HelloBeeWare\"\nbundle = \"org.example\"\nversion = \"0.1.0\"\nauthor = \"GitHub Actions\"\ndescription = \"Auto generated BeeWare app\"\nrequires = []\n\n[tool.briefcase.app.HelloBeeWare]\nformal_name = \"Hello BeeWare\"\nsource = \"app\"\n" > pyproject.toml
 
     # 5️⃣ Android proje oluştur ve build et
     - name: Build Android APK
