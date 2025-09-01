@@ -1,84 +1,20 @@
-name: Auto Build Kivy APK
-
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
+      - name: Build APK
+        uses: digreatbrian/buildozer-action@v2
+        with:
+          buildozer-cmd: buildozer -v android debug
 
-    - name: Install system dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y python3-pip python3-setuptools git zip unzip openjdk-17-jdk \
-          build-essential autoconf libtool pkg-config zlib1g-dev \
-          libncurses5-dev libffi-dev libssl-dev libsqlite3-dev wget curl \
-          libjpeg-dev libfreetype6-dev libfreetype6-dev libssl-dev
-
-    - name: Install Kivy and Buildozer
-      run: |
-        pip install --upgrade pip
-        pip install cython==0.29.36 kivy==2.3.1 buildozer==1.5.0
-
-    - name: Set up Android SDK, NDK and accept licenses
-      run: |
-        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-        mkdir -p $ANDROID_HOME/cmdline-tools
-        
-        # Download and extract Android command-line tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-        
-        # Update PATH to include sdkmanager
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
-
-        # Accept all licenses
-        yes | sdkmanager --licenses
-
-        # Install specific SDK components
-        sdkmanager "platforms;android-33" "build-tools;33.0.0" "ndk;25.2.9519653" "platform-tools"
-
-    - name: Initialize buildozer.spec if missing
-      run: |
-        if [ ! -f buildozer.spec ]; then
-          buildozer init
-        fi
-        # Set all necessary properties in buildozer.spec
-        sed -i 's/^title = .*/title = MyApp/' buildozer.spec
-        sed -i 's/^package.name = .*/package.name = com.example.myapp/' buildozer.spec
-        sed -i 's/^package.domain = .*/package.domain = org.example/' buildozer.spec
-        sed -i 's/^version = .*/version = 0.1/' buildozer.spec
-        sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
-        sed -i 's/^requirements = .*/requirements = python3,kivy/' buildozer.spec
-        # Use the API, NDK, and build-tools versions that we just installed
-        sed -i 's/^android.api = .*/android.api = 33/' buildozer.spec
-        sed -i 's/^android.sdk = .*/android.sdk = 33/' buildozer.spec
-        sed -i 's/^android.ndk = .*/android.ndk = 25.2.9519653/' buildozer.spec
-        sed -i 's/^android.build_tools = .*/android.build_tools = 33.0.0/' buildozer.spec
-
-    - name: Build debug APK
-      run: |
-        buildozer -v android debug
-
-    - name: Rename APK to a fixed name
-      run: |
-        mv bin/*.apk bin/MyApp-debug.apk || true
-
-    - name: Upload debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: MyApp-debug-apk
-        path: bin/MyApp-debug.apk
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: ./bin/*.apk
