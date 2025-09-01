@@ -35,30 +35,31 @@ jobs:
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
-          pip install buildozer cython
+          pip install buildozer cython==0.29.36
 
       - name: Create buildozer.spec if missing
         run: |
           if [ ! -f buildozer.spec ]; then
             buildozer init
-            sed -i 's/^title =.*/title = MyKivyApp/' buildozer.spec
-            sed -i 's/^package.name =.*/package.name = mykivyapp/' buildozer.spec
-            sed -i 's/^package.domain =.*/package.domain = org.example/' buildozer.spec
-            sed -i 's/^source.include_exts =.*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
-            sed -i 's/^version =.*/version = 0.1/' buildozer.spec
+            sed -i 's/^title = .*/title = MyApp/' buildozer.spec
+            sed -i 's/^package.name = .*/package.name = myapp/' buildozer.spec
+            sed -i 's/^package.domain = .*/package.domain = org.example/' buildozer.spec
+            sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
+            sed -i 's/^version = .*/version = 0.1/' buildozer.spec
+            echo "✅ buildozer.spec created"
           fi
+
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-30" "build-tools;33.0.2"
 
       - name: Build APK
         run: |
           buildozer android debug
 
-      - name: Rename APK
-        run: |
-          mkdir -p bin
-          mv bin/*.apk bin/MyKivyApp-debug.apk || true
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyKivyApp-debug
-          path: bin/MyKivyApp-debug.apk
+          name: kivy-apk
+          path: bin/*.apk
