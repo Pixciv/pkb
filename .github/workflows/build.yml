@@ -1,4 +1,4 @@
-name: CI - Build Kivy APK
+name: Build Kivy APK
 
 on:
   push:
@@ -13,94 +13,75 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      # Checkout repository
+      - uses: actions/checkout@v3
 
-    - name: Get Date
-      id: get-date
-      run: |
-        echo "date=$(date -u '+%Y%m%d')" >> $GITHUB_ENV
+      # Cache Buildozer directories to speed up builds
+      - name: Cache Buildozer global directory
+        uses: actions/cache@v3
+        with:
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
-    # Cache Buildozer directories
-    - name: Cache Buildozer global directory
-      uses: actions/cache@v3
-      with:
-        path: .buildozer_global
-        key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+      - uses: actions/cache@v3
+        with:
+          path: .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
 
-    - name: Cache Buildozer project directory
-      uses: actions/cache@v3
-      with:
-        path: .buildozer
-        key: ${{ runner.os }}-${{ env.date }}-${{ hashFiles('buildozer.spec') }}
+      # Install required system dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential git ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libunwind-dev zlib1g-dev \
+            libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev openssl libgdbm-dev libgdbm-compat-dev \
+            liblzma-dev libreadline-dev uuid-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools \
+            zip unzip autoconf libtool pkg-config libncurses6 cmake libffi-dev libssl-dev automake \
+            openjdk-17-jdk wget curl
+          
+      # Setup Java 17
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    # Install system dependencies
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          build-essential git ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-          libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev libunwind-dev zlib1g-dev \
-          libsqlite3-dev sqlite3 bzip2 libbz2-dev zlib1g-dev openssl libgdbm-dev libgdbm-compat-dev \
-          liblzma-dev libreadline-dev uuid-dev libgstreamer1.0 gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
-          zip unzip autoconf libtool pkg-config libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake \
-          openjdk-17-jdk wget curl
+      # Setup Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    # Setup Java
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
+      # Upgrade pip and install Buildozer & Cython
+      - name: Install pip dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install buildozer cython==0.29.33
 
-    # Setup Python
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.10
+      # Automatically accept Android SDK licenses and install necessary SDK packages
+      - name: Install Android SDK & accept licenses
+        run: |
+          mkdir -p $HOME/android-sdk
+          cd $HOME
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          mkdir -p android-sdk/cmdline-tools/latest
+          mv cmdline-tools/* android-sdk/cmdline-tools/latest/
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-30" "build-tools;33.0.2"
 
-    # Install Python dependencies
-    - name: Install Python packages
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install cython==0.29.36 buildozer
+      # Build the APK
+      - name: Build APK
+        run: |
+          yes | buildozer -v android debug
 
-    # Setup Android SDK and accept licenses
-    - name: Setup Android SDK and Build Tools
-      run: |
-        mkdir -p $HOME/android-sdk/cmdline-tools
-        cd $HOME/android-sdk/cmdline-tools
-        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-        unzip cmdline-tools.zip
-        mv cmdline-tools latest
-        rm cmdline-tools.zip
-        export ANDROID_HOME=$HOME/android-sdk
-        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-        yes | sdkmanager --sdk_root=$ANDROID_HOME --licenses
-        sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-30" "build-tools;33.0.2"
-
-    # Initialize buildozer.spec if missing
-    - name: Initialize buildozer.spec if missing
-      run: |
-        if [ ! -f buildozer.spec ]; then
-          buildozer init
-          sed -i 's/^title = .*/title = MyApp/' buildozer.spec
-          sed -i 's/^package.name = .*/package.name = com.example.myapp/' buildozer.spec
-          sed -i 's/^package.domain = .*/package.domain = org.example/' buildozer.spec
-          sed -i 's/^version = .*/version = 0.1/' buildozer.spec
-          sed -i 's/^source.include_exts = .*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
-          sed -i 's/^android.build_tools = .*/android.build_tools = 33.0.2/' buildozer.spec
-          sed -i 's/^android.sdk = .*/android.sdk = 30/' buildozer.spec
-          sed -i 's/^android.ndk = .*/android.ndk = 25b/' buildozer.spec
-        fi
-
-    # Build APK
-    - name: Build with Buildozer
-      run: |
-        yes | buildozer android debug
-
-    # Upload APK
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: package
-        path: bin/*.apk
+      # Upload APK artifact
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: bin/*.apk
