@@ -1,52 +1,54 @@
 [app]
+
 # (str) Title of your application
 title = MyKivyApp
 
 # (str) Package name
 package.name = mykivyapp
 
-# (str) Package domain (reverse domain)
+# (str) Package domain (reverse domain style)
 package.domain = org.example
 
-# (str) Source code where main.py is located
-source.include_exts = py,png,jpg,kv,atlas
+# (str) Source code where the main.py live
+source.dir = .
 
-# (str) Application version
-version = 0.1
-
-# (str) Kivy entry point
-# main.py içinde build() fonksiyonu olan dosya
+# (str) Main entry point of the app
 source.main = main.py
 
-# (str) Supported orientation
+# (list) Application requirements
+# örnek: kivy, requests
+requirements = python3,kivy==2.2.1,requests
+
+# (str) Icon of the app
+icon.filename = %(source.dir)s/icon.png
+
+# (str) Supported orientation (landscape, portrait)
 orientation = portrait
 
+# (str) Presplash / splash image
+presplash.filename = %(source.dir)s/presplash.png
+
 # (list) Permissions
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE
 
-# (str) Target SDK
-android.sdk = 30
+# (int) Minimum API your app supports
+android.minapi = 21
 
-# (str) Build tools version
-android.build_tools = 33.0.2
+# (int) Target API
+android.target = 33
 
-# (str) NDK version
-android.ndk = 25b
+# (str) Gradle version
+android.gradle_dependencies =
 
-# (str) Target API
-android.api = 30
+# (bool) Copy assets directory
+copy_assets = 1
 
-# (bool) Use --private storage
+# (list) Exclude some files
+exclude_patterns = *.pyc, *.pyo, *.swp, .git, .github
+
+# (bool) Use android private storage
 android.private_storage = True
 
-# (bool) Presplash
-android.presplash = False
-
-# (bool) Debug mode
-log_level = 2
-
-# (str) Supported architectures
-android.arch = armeabi-v7a, arm64-v8a
-
-# (list) Requirements (from requirements.txt)
-requirements = python3,kivy,requests
+# (str) Python version to use
+# Buildozer default 3.10, Github Actions ile uyumlu
+python.version = 3.10
