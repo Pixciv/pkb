@@ -1,25 +1,37 @@
 package com.arvinapp.acgb
 
 import android.os.Bundle
-import android.widget.TextView
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import android.view.Gravity
-import android.view.ViewGroup.LayoutParams
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var webView: WebView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val textView = TextView(this).apply {
-            text = "ACGB"
-            textSize = 54f
-            gravity = Gravity.CENTER
-            layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.MATCH_PARENT
-            )
+        webView = WebView(this).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            webViewClient = WebViewClient()
+            webChromeClient = WebChromeClient()
         }
 
-        setContentView(textView)
+        setContentView(webView)
+
+        // assets içindeki HTML dosyasını aç
+        webView.loadUrl("file:///android_asset/index.html")
+    }
+
+    // Geri tuşu WebView'de gezinme için
+    override fun onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 }
