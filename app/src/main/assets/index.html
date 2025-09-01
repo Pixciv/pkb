@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACGB WebView</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            text-align: center;
+        }
+        h1 {
+            font-size: 48px;
+            margin: 0;
+        }
+        p {
+            font-size: 20px;
+            margin-top: 10px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: rgba(255,255,255,0.4);
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>ACGB</h1>
+        <p>WebView ile çalışan basit demo</p>
+        <button onclick="sayHello()">Tıkla!</button>
+    </div>
+
+    <script>
+        function sayHello() {
+            alert("Merhaba! WebView çalışıyor 🚀");
+        }
+    </script>
+</body>
+</html>
