@@ -1,0 +1,733 @@
+/* Genel Stil ve Reset */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+/* Dark Mode Stilleri */
+body.dark-mode {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+body.dark-mode .header {
+    background-color: #333;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .top-tabs {
+    background-color: #1e1e1e;
+    border-bottom-color: #444;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .tab {
+    color: #e0e0e0;
+}
+
+body.dark-mode .tab.active {
+    color: #f44336;
+}
+
+body.dark-mode .file-item,
+body.dark-mode .folder-item {
+    background-color: #1e1e1e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .file-name,
+body.dark-mode .file-details,
+body.dark-mode .folder-name,
+body.dark-mode .folder-details {
+    color: #e0e0e0;
+}
+
+body.dark-mode .file-details,
+body.dark-mode .folder-details {
+    color: #aaa;
+}
+
+body.dark-mode .bottom-nav {
+    background-color: #1e1e1e;
+    border-top-color: #444;
+}
+
+body.dark-mode .nav-item {
+    color: #aaa;
+}
+
+body.dark-mode .nav-item.active {
+    color: #f44336;
+}
+
+body.dark-mode .drawer {
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .menu-item {
+    border-bottom: 1px solid #444;
+}
+
+body.dark-mode .menu-item:hover {
+    background-color: #3a3a3a;
+}
+
+body.dark-mode .menu-item i {
+    color: #aaa;
+}
+
+/* Drawer Menü */
+.drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    background-color: #fff;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+}
+
+.drawer.active {
+    transform: translateX(0);
+}
+
+.drawer-header {
+    background-color: #f44336;
+    color: white;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.drawer-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.drawer-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    border-bottom: 1px solid #eee;
+}
+
+.menu-item:hover {
+    background-color: #f0f0f0;
+}
+
+.menu-item i {
+    margin-right: 15px;
+    font-size: 20px;
+    color: #777;
+}
+
+/* Dark Mode anahtarı için stiller */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-left: auto;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #f44336;
+}
+
+input:checked + .slider:before {
+    transform: translateX(20px);
+}
+
+.slider.round {
+    border-radius: 20px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Overlay (katman) */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    display: none;
+}
+
+.overlay.active {
+    display: block;
+}
+
+/* Üst Çubuk */
+.header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    background-color: #f44336;
+    color: white;
+    padding: 15px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.drawer-toggle-icon, .header-back-icon {
+    font-size: 24px;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.header-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+    flex-grow: 1;
+}
+
+.header-icons {
+    display: flex;
+    align-items: center;
+}
+
+.header-icons i {
+    font-size: 20px;
+    margin-left: 15px;
+    cursor: pointer;
+}
+
+/* Arama Çubuğu Stilleri */
+.search-bar {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #f44336;
+    height: 100%;
+    padding: 0 15px;
+    box-sizing: border-box;
+    z-index: 10;
+    color: white;
+}
+
+#search-back {
+    font-size: 24px;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+#search-input {
+    flex-grow: 1;
+    border: none;
+    background-color: transparent;
+    color: white;
+    font-size: 16px;
+    outline: none;
+}
+
+#search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+#search-clear {
+    font-size: 20px;
+    margin-left: 10px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Seçim Modu Üst Barı Stilleri */
+.selection-header {
+    background-color: #f44336;
+    color: white;
+}
+
+body.selection-mode .header-icons {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Seçim Modu Alt Barı Stilleri */
+.selection-actions {
+    display: none;
+}
+
+/* Sekme Navigasyonu */
+.top-tabs {
+    display: flex;
+    justify-content: space-around;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.tab {
+    flex: 1;
+    text-align: center;
+    padding: 15px 0;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.3s;
+}
+
+.tab.active {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #f44336;
+}
+
+/* İçerik Alanı */
+.content-container {
+    flex-grow: 1;
+    position: relative;
+}
+
+.content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px;
+    display: none;
+}
+
+.content.active {
+    display: block;
+}
+
+.file-list-container {
+    padding: 0;
+}
+
+.file-item-wrapper {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    position: relative;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    flex-grow: 1;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.file-checkbox {
+    margin-right: 10px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    display: none;
+}
+
+body.selection-mode .file-checkbox {
+    display: block;
+}
+
+body.selection-mode .file-actions {
+    display: none;
+}
+
+.file-icon-container {
+    width: 40px;
+    height: 40px;
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Font Awesome ikonları için stiller */
+.file-icon {
+    font-size: 24px;
+    color: white;
+}
+
+/* Dosya türüne göre renkler */
+.file-item .fa-file-pdf { color: #f44336; }
+.file-item .fa-file-word { color: #2196f3; }
+.file-item .fa-file-excel { color: #4caf50; }
+.file-item .fa-file-powerpoint { color: #ff9800; }
+.file-item .fa-file { color: #666; }
+
+.file-info {
+    flex-grow: 1;
+}
+
+.file-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.file-details {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Favori ikonu ve menü için stil */
+.file-actions {
+    display: flex;
+    align-items: center;
+    margin-right: 5px;
+}
+
+.favorite-icon {
+    font-size: 20px;
+    color: #ccc;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: color 0.2s ease-in-out;
+}
+
+/* Dolu yıldız ikonu */
+.favorite-icon.fas {
+    color: #ffc107;
+}
+
+.file-menu {
+    font-size: 20px;
+    color: #aaa;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+/* Dosya menüsü pop-up stili */
+.file-menu-popup {
+    position: absolute;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    list-style: none;
+    padding: 10px 0;
+    margin: 0;
+    min-width: 180px;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+}
+
+.file-menu-popup.active {
+    display: block;
+}
+
+.file-menu-popup li {
+    padding: 12px 20px;
+    font-size: 15px;
+    color: #333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.file-menu-popup li:hover {
+    background-color: #f5f5f5;
+}
+
+.file-menu-popup li i {
+    margin-right: 12px;
+    color: #777;
+}
+
+/* Dark Mode için Pop-up Stilleri */
+body.dark-mode .file-menu-popup {
+    background-color: #2c2c2c;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .file-menu-popup li {
+    color: #e0e0e0;
+}
+
+body.dark-mode .file-menu-popup li:hover {
+    background-color: #3a3a3a;
+}
+
+body.dark-mode .file-menu-popup li i {
+    color: #aaa;
+}
+
+
+/* Boş içerik durumu */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+    text-align: center;
+}
+
+.empty-state i {
+    margin-bottom: 15px;
+}
+
+/* Araçlar bölümü */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.tool-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    color: #555;
+    text-align: center;
+}
+
+.tool-item:hover {
+    background-color: #f5f5f5;
+}
+
+.tool-item i {
+    font-size: 30px;
+    margin-bottom: 10px;
+    color: #f44336;
+}
+
+/* Kayan Eylem Butonu */
+.add-button {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    font-size: 24px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 100;
+}
+
+/* Alt Navigasyon Çubuğu */
+.bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+    cursor: pointer;
+}
+
+.nav-item.active {
+    color: #f44336;
+}
+
+.nav-item i {
+    font-size: 20px;
+    margin-bottom: 5px;
+}
+
+/* Pop-up Stilleri */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    z-index: 500;
+}
+
+.sort-popup-content {
+    background-color: #fff;
+    width: 100%;
+    max-height: 80%;
+    border-radius: 12px 12px 0 0;
+    padding: 20px;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.2);
+    transform: translateY(100%);
+    animation: slideUp 0.3s forwards;
+}
+
+@keyframes slideUp {
+    to { transform: translateY(0); }
+}
+
+.popup-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+.popup-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.sort-options {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sort-option {
+    padding: 15px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    color: #555;
+    position: relative;
+}
+
+.sort-option:hover {
+    background-color: #f0f0f0;
+}
+
+.sort-option.active {
+    color: #f44336;
+    font-weight: bold;
+}
+
+.sort-option.active i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.popup-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.popup-button {
+    background-color: transparent;
+    border: none;
+    font-size: 16px;
+    font-weight: bold;
+    color: #f44336;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+/* Dark Mode için Pop-up Stilleri */
+body.dark-mode .sort-popup-content {
+    background-color: #2c2c2c;
+    color: #e0e0e0;
+}
+
+body.dark-mode .sort-popup-content .popup-header {
+    border-bottom: 1px solid #444;
+}
+
+body.dark-mode .sort-popup-content .sort-option {
+    color: #e0e0e0;
+}
+
+body.dark-mode .sort-popup-content .sort-option:hover {
+    background-color: #3a3a3a;
+}
+
+body.dark-mode .sort-popup-content .popup-actions {
+    border-top: 1px solid #444;
+}

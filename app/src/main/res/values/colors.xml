@@ -1,0 +1,5 @@
+<resources>
+    <color name="status_bar_color">#FF5722</color> <!-- turuncu -->
+    <color name="navigation_bar_color">#212121</color> <!-- koyu gri -->
+    <color name="app_background">#FFFFFF</color> <!-- beyaz -->
+</resources>
