@@ -1,46 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="8dp"
+    android:layout_height="72dp"
+    android:orientation="horizontal"
+    android:padding="12dp"
     android:gravity="center_vertical">
 
     <ImageView
-        android:id="@+id/fileIcon"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:id="@+id/icon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
         android:src="@drawable/ic_file"
-        android:contentDescription="file icon" />
+        android:contentDescription="icon"/>
 
     <LinearLayout
-        android:orientation="vertical"
-        android:layout_marginStart="8dp"
         android:layout_width="0dp"
         android:layout_weight="1"
-        android:layout_height="wrap_content">
-
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="12dp">
         <TextView
-            android:id="@+id/fileName"
-            android:text="File Name"
-            android:textSize="16sp"
-            android:textColor="@android:color/black"
+            android:id="@+id/title"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
+            android:layout_height="wrap_content"
+            android:text="Dosya.pdf"
+            android:textSize="16sp"/>
         <TextView
-            android:id="@+id/fileDetails"
-            android:text="Date · Size"
+            android:id="@+id/sub"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="18 KB · 12.05.2024"
             android:textSize="12sp"
-            android:textColor="@android:color/darker_gray"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:textColor="#777777"/>
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/favoriteIcon"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:src="@drawable/ic_star_outline"
-        android:contentDescription="favorite icon" />
+    <ImageButton
+        android:id="@+id/menu_btn"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:src="@android:drawable/ic_menu_more"/>
 </LinearLayout>
