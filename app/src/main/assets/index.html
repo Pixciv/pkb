@@ -192,6 +192,82 @@
         </li>
     </div>
     
+    <script>
+    // Dosya tıklamalarını işlemek için JavaScript
+    document.addEventListener('DOMContentLoaded', function() {
+        // Dosya tıklama dinleyicisini kur
+        setupFileClickListeners();
+        
+        // Dinamik içerik için periyodik kontrol
+        setInterval(setupFileClickListeners, 1000);
+        
+        // Android interface kontrolü
+        window.isAndroid = typeof Android !== 'undefined';
+    });
+
+    function setupFileClickListeners() {
+        // Tüm dosya elementlerini bul
+        const fileElements = document.querySelectorAll('.file-item, .file-list-item, [data-file-path]');
+        
+        fileElements.forEach(element => {
+            // Sadece bir kere event listener ekle
+            if (!element.hasAttribute('data-click-listener')) {
+                element.setAttribute('data-click-listener', 'true');
+                
+                element.addEventListener('click', function(e) {
+                    // Eğer seçim modundaysa veya menü açıksa tıklamayı engelle
+                    if (document.querySelector('.selection-header:not([style*="display: none"])') ||
+                        document.querySelector('.file-menu-popup:not([style*="display: none"])')) {
+                        return;
+                    }
+                    
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Dosya yolunu bul
+                    let filePath = element.getAttribute('data-file-path') || 
+                                 element.getAttribute('data-file') ||
+                                 element.getAttribute('onclick')?.match(/'([^']+)'|"([^"]+)"/)?.[1] ||
+                                 element.href;
+                    
+                    if (filePath && !filePath.startsWith('javascript:')) {
+                        openFile(filePath);
+                    }
+                });
+            }
+        });
+    }
+
+    function openFile(filePath) {
+        console.log('Dosya açılıyor:', filePath);
+        
+        if (window.isAndroid && typeof Android !== 'undefined') {
+            // Android uygulaması içinde aç
+            try {
+                Android.openFile(filePath);
+            } catch (error) {
+                console.error('Android interface hatası:', error);
+                fallbackOpenFile(filePath);
+            }
+        } else {
+            // Browser'da veya fallback
+            fallbackOpenFile(filePath);
+        }
+    }
+
+    function fallbackOpenFile(filePath) {
+        // Browser'da aç veya bilgi göster
+        if (filePath.startsWith('http') || filePath.startsWith('file://')) {
+            window.open(filePath, '_blank');
+        } else {
+            alert('Dosya açılıyor: ' + filePath);
+        }
+    }
+
+    // Mevcut script.js fonksiyonlarıyla uyumluluk
+    window.openFile = openFile;
+    </script>
+    
     <script src="script.js"></script>
 </body>
 </html>
