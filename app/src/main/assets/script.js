@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ---------------------------
+    // Elementler
+    // ---------------------------
     const mainHeader = document.getElementById('main-header');
     const selectionHeader = document.getElementById('selection-header');
     const selectIcon = document.getElementById('select-icon');
@@ -33,12 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const bottomNavItems = document.querySelectorAll('.bottom-nav .nav-item');
     const contentSections = document.querySelectorAll('.content-container .content');
     const fileMenuPopup = document.getElementById('file-menu-popup');
+    const importFileItem = document.getElementById('import-file-item');
 
     let allFiles = [];
     let selectionMode = false;
     let selectedFiles = [];
 
-    // Load files from localStorage
+    // ---------------------------
+    // LocalStorage
+    // ---------------------------
     function loadFiles() {
         const storedFiles = localStorage.getItem('allFiles');
         if (storedFiles) allFiles = JSON.parse(storedFiles);
@@ -48,33 +55,60 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     loadFiles();
 
-    // Dark mode setup
+    // ---------------------------
+    // Dark Mode
+    // ---------------------------
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
     if (isDarkMode) {
         document.body.classList.add('dark-mode');
         darkModeToggle.checked = true;
     }
+    darkModeToggle.addEventListener('change', ()=>{
+        document.body.classList.toggle('dark-mode', darkModeToggle.checked);
+        localStorage.setItem('darkMode', darkModeToggle.checked);
+    });
 
-    // Navigation
-    function showContent(navId) {
-        contentSections.forEach(section => {
-            section.classList.toggle('active', section.id === `${navId}-content`);
-        });
-        document.querySelector('.top-tabs').style.display = navId === 'all-files' ? 'flex' : 'none';
-        headerTitle.textContent = navId === 'all-files' ? 'All PDF Reader' :
-                                  navId === 'recent' ? 'Son Kullanılanlar' :
-                                  navId === 'favorites' ? 'Favoriler' :
-                                  navId === 'tools' ? 'Araçlar' : 'All PDF Reader';
-        backButton.style.display = navId === 'all-files' ? 'none' : 'block';
-        drawerToggle.style.display = navId === 'all-files' ? 'block' : 'none';
-        sortIcon.style.display = 'block';
-        searchIcon.style.display = 'block';
-        exitSelectionMode();
+    // ---------------------------
+    // Drawer
+    // ---------------------------
+    function toggleDrawer(open){
+        drawer.classList.toggle('active', open);
+        overlay.classList.toggle('active', open);
+    }
+    drawerToggle.addEventListener('click', ()=>toggleDrawer(true));
+    overlay.addEventListener('click', ()=>toggleDrawer(false));
+
+    // ---------------------------
+    // Android Dosya Seçimi
+    // ---------------------------
+    importFileItem.addEventListener('click', () => {
+        if (window.Android && window.Android.pickFile) {
+            window.Android.pickFile();
+        } else {
+            alert("Dosya seçici Android uygulamasında çalışır.");
+        }
+    });
+
+    window.handleImportedFileFromAndroid = function(uri) {
+        console.log("Seçilen dosya URI:", uri);
+        // WebView tarafında işlemek için örnek
+        const fileName = uri.split('/').pop();
+        const newFile = {
+            name: fileName,
+            type: fileName.split('.').pop().toLowerCase(),
+            date: new Date().toLocaleDateString(),
+            size: '0 kB',
+            isFavorite: false
+        };
+        allFiles.push(newFile);
+        saveFiles();
         renderCurrentContent();
     }
 
-    // Render files
-    function renderContent(files, targetElement, fileTypeFilter = 'all', sortCriteria = 'date-desc', searchTerm = '') {
+    // ---------------------------
+    // Render
+    // ---------------------------
+    function renderContent(files, targetElement, fileTypeFilter='all', sortCriteria='date-desc', searchTerm='') {
         targetElement.innerHTML = '';
         fileMenuPopup.style.display = 'none';
 
@@ -82,18 +116,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const typesMap = {
             'pdf': ['pdf'],
-            'word': ['doc', 'docx'],
-            'excel': ['xls', 'xlsx'],
-            'ppt': ['ppt', 'pptx']
+            'word': ['doc','docx'],
+            'excel': ['xls','xlsx'],
+            'ppt': ['ppt','pptx']
         };
-        if (fileTypeFilter !== 'all') filesToRender = filesToRender.filter(f => typesMap[fileTypeFilter].includes(f.type));
-        if (searchTerm) filesToRender = filesToRender.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        if(fileTypeFilter!=='all') filesToRender = filesToRender.filter(f => typesMap[fileTypeFilter].includes(f.type));
+        if(searchTerm) filesToRender = filesToRender.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
         const activeNavId = document.querySelector('.bottom-nav .nav-item.active').dataset.nav;
-        if (activeNavId === 'favorites') filesToRender = filesToRender.filter(f => f.isFavorite);
+        if(activeNavId==='favorites') filesToRender = filesToRender.filter(f => f.isFavorite);
 
         // Sorting
-        filesToRender.sort((a,b) => {
+        filesToRender.sort((a,b)=>{
             switch(sortCriteria){
                 case 'date-desc': return new Date(b.date)-new Date(a.date);
                 case 'date-asc': return new Date(a.date)-new Date(b.date);
@@ -105,20 +139,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        if (filesToRender.length === 0) {
+        if(filesToRender.length===0){
             targetElement.innerHTML = `<div class="empty-state">
                 <i class="fas fa-folder-open fa-3x"></i>
-                <p>${searchTerm ? 'Aradığınız dosya bulunamadı.' : 'Henüz hiç dosyanız yok'}</p>
+                <p>${searchTerm?'Aradığınız dosya bulunamadı.':'Henüz hiç dosyanız yok'}</p>
             </div>`;
             return;
         }
 
-        filesToRender.forEach(item => {
+        filesToRender.forEach(item=>{
             const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            if (selectionMode) fileItem.classList.add('selection-mode');
+            fileItem.className='file-item';
+            if(selectionMode) fileItem.classList.add('selection-mode');
 
-            let iconClass = 'fa-file';
+            let iconClass='fa-file';
             if(item.type==='pdf') iconClass='fa-file-pdf';
             else if(['doc','docx'].includes(item.type)) iconClass='fa-file-word';
             else if(['xls','xlsx'].includes(item.type)) iconClass='fa-file-excel';
@@ -175,75 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function updateSelectionCount(){
-        selectionCount.textContent=`${selectedFiles.length} Dosya Seçildi`;
-        selectionDelete.style.display = selectedFiles.length>0?'block':'none';
-        selectionMove.style.display = selectedFiles.length>0?'block':'none';
-        selectionShare.style.display = selectedFiles.length>0?'block':'none';
-    }
-
-    function toggleFavorite(fileName){
-        const file = allFiles.find(f=>f.name===fileName);
-        if(file){ file.isFavorite=!file.isFavorite; saveFiles(); renderCurrentContent(); }
-    }
-
-    function renameFile(oldName){
-        const file = allFiles.find(f=>f.name===oldName);
-        if(file){
-            const newName = prompt("Dosyayı yeniden adlandır:", file.name);
-            if(newName && newName!==file.name){ file.name=newName; saveFiles(); renderCurrentContent(); }
-        }
-    }
-
-    function deleteFile(fileName){
-        if(confirm(`${fileName} dosyasını silmek istediğinizden emin misiniz?`)){
-            allFiles = allFiles.filter(f=>f.name!==fileName);
-            saveFiles();
-            renderCurrentContent();
-        }
-    }
-
-    function deleteSelectedFiles(){
-        if(selectedFiles.length>0 && confirm(`${selectedFiles.length} dosyayı silmek istediğinizden emin misiniz?`)){
-            const selectedNames = selectedFiles.map(f=>f.name);
-            allFiles = allFiles.filter(f=>!selectedNames.includes(f.name));
-            saveFiles();
-            exitSelectionMode();
-        }
-    }
-
-    selectionDelete.addEventListener('click', deleteSelectedFiles);
-    selectionMove.addEventListener('click', ()=>{ alert("Dosyalar taşınıyor..."); exitSelectionMode(); });
-    selectionShare.addEventListener('click', ()=>{ alert("Dosyalar paylaşılıyor..."); exitSelectionMode(); });
-
-    function showFileMenu(targetIcon, fileName){
-        const rect = targetIcon.getBoundingClientRect();
-        fileMenuPopup.style.top=`${rect.bottom+5}px`;
-        fileMenuPopup.style.left=`${rect.left-150}px`;
-        fileMenuPopup.style.display='block';
-        fileMenuPopup.dataset.targetFile=fileName;
-
-        const file = allFiles.find(f=>f.name===fileName);
-        const favoriteMenuItem = fileMenuPopup.querySelector('.menu-favorite span');
-        favoriteMenuItem.textContent = file.isFavorite?'Favorilerden Kaldır':'Favorilere Ekle';
-        fileMenuPopup.querySelector('.menu-favorite i').className = file.isFavorite?'fas fa-star':'far fa-star';
-    }
-
-    fileMenuPopup.addEventListener('click', e=>{
-        const action = e.target.closest('li').dataset.action;
-        const fileName = fileMenuPopup.dataset.targetFile;
-        if(action==='toggle-favorite') toggleFavorite(fileName);
-        else if(action==='rename') renameFile(fileName);
-        else if(action==='delete') deleteFile(fileName);
-        fileMenuPopup.style.display='none';
-    });
-
-    document.addEventListener('click', e=>{
-        if(!fileMenuPopup.contains(e.target) && !e.target.classList.contains('file-menu')){
-            fileMenuPopup.style.display='none';
-        }
-    });
-
     function renderCurrentContent(){
         const activeNav = document.querySelector('.bottom-nav .nav-item.active').dataset.nav;
         let targetElement = activeNav==='favorites'?favoritesListContent:fileListContent;
@@ -254,124 +219,72 @@ document.addEventListener('DOMContentLoaded', () => {
         renderContent(allFiles, targetElement, activeTabType, currentSort, currentSearchTerm);
     }
 
-    function enterSelectionMode(){
-        selectionMode=true;
-        selectedFiles=[];
-        mainHeader.style.display='none';
-        selectionHeader.style.display='flex';
-        bottomNav.style.display='none';
-        document.body.classList.add('selection-mode');
-        renderCurrentContent();
-        updateSelectionCount();
+    // ---------------------------
+// Selection İşlemleri
+// ---------------------------
+function updateSelectionCount(){
+    selectionCount.textContent = `${selectedFiles.length} Dosya Seçildi`;
+    selectionDelete.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+    selectionMove.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+    selectionShare.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+}
+
+selectionDelete.addEventListener('click', deleteSelectedFiles);
+selectionMove.addEventListener('click', () => { 
+    alert("Dosyalar taşınıyor..."); 
+    exitSelectionMode(); 
+});
+selectionShare.addEventListener('click', () => { 
+    alert("Dosyalar paylaşılıyor..."); 
+    exitSelectionMode(); 
+});
+
+function deleteSelectedFiles(){
+    if(selectedFiles.length > 0 && confirm(`${selectedFiles.length} dosyayı silmek istediğinizden emin misiniz?`)){
+        const selectedNames = selectedFiles.map(f => f.name);
+        allFiles = allFiles.filter(f => !selectedNames.includes(f.name));
+        saveFiles();
+        exitSelectionMode();
     }
+}
 
-    function exitSelectionMode(){
-        selectionMode=false;
-        selectedFiles=[];
-        mainHeader.style.display='flex';
-        selectionHeader.style.display='none';
-        bottomNav.style.display='flex';
-        document.body.classList.remove('selection-mode');
-        renderCurrentContent();
-    }
-
-    selectIcon.addEventListener('click', enterSelectionMode);
-    selectionCancel.addEventListener('click', exitSelectionMode);
-
-    selectionAll.addEventListener('click', ()=>{
-        const allCheckboxes=document.querySelectorAll('.file-checkbox');
-        const allSelected = selectedFiles.length===allCheckboxes.length;
-        selectedFiles=[];
-        allCheckboxes.forEach(checkbox=>{
-            checkbox.checked = !allSelected;
-            if(!allSelected){
-                const fileName = checkbox.dataset.filename;
-                const file = allFiles.find(f=>f.name===fileName);
-                if(file) selectedFiles.push(file);
-            }
-        });
-        updateSelectionCount();
-    });
-
-    searchIcon.addEventListener('click', ()=>{
-        headerTitle.style.display='none';
-        headerIcons.style.display='none';
-        drawerToggle.style.display='none';
-        backButton.style.display='none';
-        searchBar.style.display='flex';
-        searchInput.focus();
-    });
-
-    searchBack.addEventListener('click', ()=>{
-        headerTitle.style.display='block';
-        headerIcons.style.display='flex';
-        drawerToggle.style.display='block';
-        backButton.style.display='none';
-        searchBar.style.display='none';
-        searchInput.value='';
-        renderCurrentContent();
-    });
-
-    searchClear.addEventListener('click', ()=>{
-        searchInput.value='';
-        searchInput.focus();
-        renderCurrentContent();
-    });
-
-    searchInput.addEventListener('input', renderCurrentContent);
-
-    sortIcon.addEventListener('click', ()=> sortPopup.style.display='flex');
-    sortCancelButton.addEventListener('click', ()=> sortPopup.style.display='none');
-    sortOptions.forEach(option=>{
-        option.addEventListener('click', ()=>{
-            sortOptions.forEach(opt=>opt.classList.remove('active'));
-            option.classList.add('active');
-        });
-    });
-    sortApplyButton.addEventListener('click', ()=>{
-        sortPopup.style.display='none';
-        renderCurrentContent();
-    });
-
-    topTabs.forEach(tab=>{
-        tab.addEventListener('click', ()=>{
-            topTabs.forEach(t=>t.classList.remove('active'));
-            tab.classList.add('active');
-            renderCurrentContent();
-        });
-    });
-
-    function toggleDrawer(open){
-        drawer.classList.toggle('active', open);
-        overlay.classList.toggle('active', open);
-    }
-    drawerToggle.addEventListener('click', ()=>toggleDrawer(true));
-    overlay.addEventListener('click', ()=>toggleDrawer(false));
-
-    backButton.addEventListener('click', ()=>{
-        bottomNavItems.forEach(item=>item.classList.remove('active'));
-        document.querySelector('.nav-item[data-nav="all-files"]').classList.add('active');
-        document.querySelector('.top-tabs .tab[data-tab="all"]').classList.add('active');
-        showContent('all-files');
-    });
-
-    bottomNavItems.forEach(item=>{
-        item.addEventListener('click', ()=>{
-            const navId=item.dataset.nav;
-            bottomNavItems.forEach(nav=>nav.classList.remove('active'));
-            item.classList.add('active');
-            showContent(navId);
-        });
-    });
-
-    // Swipe drawer
-    let touchStartX=0;
-    document.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; });
-    document.addEventListener('touchend', e=>{
-        const deltaX = e.changedTouches[0].clientX - touchStartX;
-        if(deltaX<-50 && drawer.classList.contains('active')) toggleDrawer(false);
-        else if(deltaX>50 && !drawer.classList.contains('active')) toggleDrawer(true);
-    });
-
+function enterSelectionMode(){
+    selectionMode = true;
+    selectedFiles = [];
+    mainHeader.style.display = 'none';
+    selectionHeader.style.display = 'flex';
+    bottomNav.style.display = 'none';
+    document.body.classList.add('selection-mode');
     renderCurrentContent();
+    updateSelectionCount();
+}
+
+function exitSelectionMode(){
+    selectionMode = false;
+    selectedFiles = [];
+    mainHeader.style.display = 'flex';
+    selectionHeader.style.display = 'none';
+    bottomNav.style.display = 'flex';
+    document.body.classList.remove('selection-mode');
+    renderCurrentContent();
+}
+
+// Select icon ve cancel
+selectIcon.addEventListener('click', enterSelectionMode);
+selectionCancel.addEventListener('click', exitSelectionMode);
+
+// Select All
+selectionAll.addEventListener('click', ()=>{
+    const allCheckboxes = document.querySelectorAll('.file-checkbox');
+    const allSelected = selectedFiles.length === allCheckboxes.length;
+    selectedFiles = [];
+    allCheckboxes.forEach(checkbox => {
+        checkbox.checked = !allSelected;
+        if(!allSelected){
+            const fileName = checkbox.dataset.filename;
+            const file = allFiles.find(f => f.name === fileName);
+            if(file) selectedFiles.push(file);
+        }
+    });
+    updateSelectionCount();
 });
