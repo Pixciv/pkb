@@ -25,12 +25,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        setContentView(R.layout.activity_main) // layout dosyanız varsa bu satır kalsın, aksi halde set content'i kaldırın
-
-        webView = findViewById(R.id.your_webview_id) // WebView'inizin ID'si
-
-        // İzinleri kontrol et ve iste
         checkPermissions()
     }
 
@@ -65,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupWebView() {
-        webView.apply {
+        webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             webViewClient = WebViewClient()
@@ -90,6 +84,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        setContentView(webView) // <-- Bu satır WebView'i ekrana ekler
 
         // assets içindeki HTML dosyasını aç
         webView.loadUrl("file:///android_asset/index.html")
@@ -116,3 +111,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
+
