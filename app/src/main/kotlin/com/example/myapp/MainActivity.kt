@@ -1,5 +1,6 @@
 package com.arvinapp.acgb
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -23,19 +25,24 @@ class MainActivity : AppCompatActivity() {
             settings.domStorageEnabled = true
             webViewClient = WebViewClient()
             webChromeClient = object : WebChromeClient() {
-                // Dosya seçme penceresini açmak için bu metot gereklidir
                 override fun onShowFileChooser(
                     webView: WebView?,
                     filePathCallback: ValueCallback<Array<Uri>>?,
                     fileChooserParams: FileChooserParams?
                 ): Boolean {
-                    if (mUploadMessage != null) {
-                        mUploadMessage!!.onReceiveValue(null)
-                        mUploadMessage = null
-                    }
+                    // Eğer önceden bir dosya seçme işlemi açıksa onu iptal et
+                    mUploadMessage?.onReceiveValue(null)
                     mUploadMessage = filePathCallback
+
+                    // Dosya seçme intent'ini oluştur
                     val intent = fileChooserParams?.createIntent()
-                    startActivityForResult(intent, FILECHOOSER_RESULTCODE)
+                    try {
+                        startActivityForResult(intent, FILECHOOSER_RESULTCODE)
+                    } catch (e: ActivityNotFoundException) {
+                        mUploadMessage = null
+                        Toast.makeText(this@MainActivity, "Dosya yöneticisi açılamadı.", Toast.LENGTH_LONG).show()
+                        return false
+                    }
                     return true
                 }
             }
@@ -53,7 +60,9 @@ class MainActivity : AppCompatActivity() {
             if (mUploadMessage == null) {
                 return
             }
-            mUploadMessage!!.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            mUploadMessage!!.onReceiveValue(
+                WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+            )
             mUploadMessage = null
         }
     }
