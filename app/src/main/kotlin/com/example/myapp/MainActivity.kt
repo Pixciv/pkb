@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.provider.Settings
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
@@ -29,44 +30,43 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // İzin verildi, WebView'i başlat
             setupWebView()
         } else {
-            // İzin reddedildi, kullanıcıya bilgi ver
             showPermissionDeniedDialog()
         }
     }
 
+    // Ayarlar ekranı için launcher
+    private val settingsLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Ayarlardan dönüldüğünde izinleri tekrar kontrol et
+        checkPermissions()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        // Önce tema ve layout'u ayarla (beyaz ekran gözükmesin)
-        setContentView(R.layout.activity_main) // Eğer layout dosyanız yoksa, sonraki satırda oluşturacağız
-        
-        // İzinleri kontrol et
         checkPermissions()
     }
 
     private fun checkPermissions() {
-        // Android sürümüne göre izin kontrolü
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Android 6.0+ için runtime izin iste
-            when {
-                ContextCompat.checkSelfPermission(
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ için MANAGE_EXTERNAL_STORAGE veya dosya erişim izni kontrolü
+            if (Environment.isExternalStorageManager()) {
+                setupWebView()
+            } else {
+                requestStoragePermission()
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android 6.0-10 için READ_EXTERNAL_STORAGE izni
+            if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // İzin zaten verilmiş
-                    setupWebView()
-                }
-                shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE) -> {
-                    // Kullanıcı daha önce reddetmiş, açıklama göster
-                    showPermissionRationale()
-                }
-                else -> {
-                    // İlk defa izin iste
-                    requestStoragePermission()
-                }
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                setupWebView()
+            } else {
+                requestStoragePermission()
             }
         } else {
             // Android 6.0 altı için izin gerekmez
@@ -75,61 +75,71 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestStoragePermission() {
-        // Modern dialog ile izin iste
-        requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // Android 11+ için tüm dosyalara erişim izni iste
+            showAndroid11PermissionDialog()
+        } else {
+            // Android 6.0-10 için runtime izin iste
+            requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
     }
 
-    private fun showPermissionRationale() {
+    private fun showAndroid11PermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Dosya Erişim İzni Gerekli")
-            .setMessage("Dosyaları içe aktarmak ve uygulamanın düzgün çalışması için dosya erişim iznine ihtiyacımız var. İzin vermezseniz, dosya içe aktarma özelliği çalışmayacaktır.")
-            .setPositiveButton("İzin Ver") { dialog, _ ->
+            .setMessage("Dosyaları içe aktarmak için tüm dosyalara erişim izni vermeniz gerekiyor. 'Ayarlara Git' butonuna tıklayıp 'Tüm dosyalara erişim izni ver' seçeneğini etkinleştirin.")
+            .setPositiveButton("Ayarlara Git") { dialog, _ ->
                 dialog.dismiss()
-                requestStoragePermission()
+                openStorageSettings()
             }
-            .setNegativeButton("Reddet") { dialog, _ ->
+            .setNegativeButton("İptal") { dialog, _ ->
                 dialog.dismiss()
-                // Sınırlı erişimle devam et
-                setupWebViewWithLimitedAccess()
+                showPermissionDeniedDialog()
             }
             .setCancelable(false)
             .show()
+    }
+
+    private fun openStorageSettings() {
+        try {
+            // Android 11+ için doğru ayar ekranını aç
+            val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            intent.data = Uri.parse("package:$packageName")
+            settingsLauncher.launch(intent)
+        } catch (e: Exception) {
+            try {
+                // Fallback: genel ayarlar ekranı
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = Uri.parse("package:$packageName")
+                settingsLauncher.launch(intent)
+            } catch (e2: Exception) {
+                Toast.makeText(this, "Ayarlar açılamadı", Toast.LENGTH_SHORT).show()
+                showPermissionDeniedDialog()
+            }
+        }
     }
 
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(this)
             .setTitle("İzin Reddedildi")
-            .setMessage("Dosya erişim iznini reddettiniz. Uygulamayı sınırlı modda kullanabilirsiniz, ancak dosya içe aktarma özelliği çalışmayacaktır. Ayarlardan daha sonra izin verebilirsiniz.")
+            .setMessage("Dosya erişim iznini reddettiniz. Uygulamayı sınırlı modda kullanabilirsiniz, ancak dosya içe aktarma özelliği çalışmayacaktır.")
             .setPositiveButton("Tamam") { dialog, _ ->
                 dialog.dismiss()
                 setupWebViewWithLimitedAccess()
             }
-            .setNegativeButton("Ayarlar") { dialog, _ ->
+            .setNegativeButton("Tekrar Dene") { dialog, _ ->
                 dialog.dismiss()
-                openAppSettings()
+                checkPermissions()
             }
             .setCancelable(false)
             .show()
     }
 
-    private fun openAppSettings() {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.fromParts("package", packageName, null)
-        }
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Ayarlar açılamadı", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun setupWebView() {
-        // Tam erişim ile WebView'i kur
         initializeWebView(true)
     }
 
     private fun setupWebViewWithLimitedAccess() {
-        // Sınırlı erişim ile WebView'i kur
         initializeWebView(false)
     }
 
@@ -140,19 +150,7 @@ class MainActivity : AppCompatActivity() {
             settings.allowFileAccess = hasStoragePermission
             settings.allowContentAccess = hasStoragePermission
             
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    // JavaScript ile izin durumunu bildir
-                    if (!hasStoragePermission) {
-                        evaluateJavascript("""
-                            if(typeof onStoragePermissionDenied === 'function') {
-                                onStoragePermissionDenied();
-                            }
-                        """.trimIndent(), null)
-                    }
-                }
-            }
+            webViewClient = WebViewClient()
             
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(
@@ -161,13 +159,14 @@ class MainActivity : AppCompatActivity() {
                     fileChooserParams: FileChooserParams?
                 ): Boolean {
                     if (!hasStoragePermission) {
-                        // İzin yoksa kullanıcıyı bilgilendir
                         runOnUiThread {
                             Toast.makeText(
                                 this@MainActivity,
-                                "Dosya erişim izni olmadığı için dosya seçilemiyor",
+                                "Dosya erişim izni gerekli. Lütfen ayarlardan izin verin.",
                                 Toast.LENGTH_LONG
                             ).show()
+                            // İzin yoksa kullanıcıyı ayarlara yönlendir
+                            openStorageSettings()
                         }
                         callback?.onReceiveValue(null)
                         return false
