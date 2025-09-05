@@ -98,15 +98,15 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == FILECHOOSER_RESULTCODE) {
-            if (mUploadMessage == null) {
-                return
+            mUploadMessage?.let { uploadMessage ->
+                val result = if (data != null && resultCode == RESULT_OK) data else null
+                uploadMessage.onReceiveValue(
+                    result?.let {
+                        WebChromeClient.FileChooserParams.parseResult(resultCode, it)
+                    }
+                )
+                mUploadMessage = null
             }
-            // `data` değişkeninin null olup olmadığını ve sonucun başarılı olup olmadığını kontrol et
-            val result = if (data == null || resultCode != RESULT_OK) null else data
-            mUploadMessage!!.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(resultCode, result)
-            )
-            mUploadMessage = null
         }
     }
 
