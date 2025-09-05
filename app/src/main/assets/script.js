@@ -34,9 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const contentSections = document.querySelectorAll('.content-container .content');
     const fileMenuPopup = document.getElementById('file-menu-popup');
 
-    const importFileItem = document.getElementById('import-file-item');
-    const importFileInput = document.getElementById('import-file-input');
-
     let allFiles = [];
     let selectionMode = false;
     let selectedFiles = [];
@@ -469,59 +466,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let touchStartX = 0;
-    document.addEventListener('touchstart', (e) => {
-        touchStartX = e.touches[0].clientX;
-    });
+document.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+});
 
-    document.addEventListener('touchend', (e) => {
-        const touchEndX = e.changedTouches[0].clientX;
-        const deltaX = touchEndX - touchStartX;
+document.addEventListener('touchend', (e) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const deltaX = touchEndX - touchStartX;
 
-        if (deltaX < -50 && drawer.classList.contains('active')) {
-            toggleDrawer(false);
-        } else if (deltaX > 50 && !drawer.classList.contains('active')) {
-            toggleDrawer(true);
-        }
-    });
-
-    darkModeToggle.addEventListener('change', (e) => {
-        if (e.target.checked) {
-            document.body.classList.add('dark-mode');
-            localStorage.setItem('darkMode', 'true');
-        } else {
-            document.body.classList.remove('dark-mode');
-            localStorage.setItem('darkMode', 'false');
-        }
-    });
-
-    importFileItem.addEventListener('click', () => {
-        importFileInput.click();
-    });
-
-    importFileInput.addEventListener('change', (event) => {
-        const files = event.target.files;
-        if (files.length > 0) {
-            Array.from(files).forEach(file => {
-                const fileType = file.name.split('.').pop().toLowerCase();
-                const fileSize = (file.size / 1024).toFixed(2);
-
-                allFiles.push({
-                    name: file.name,
-                    type: fileType,
-                    date: new Date().toLocaleDateString('tr-TR'),
-                    size: `${fileSize} kB`,
-                    isFavorite: false
-                });
-            });
-            saveFiles();
-            renderCurrentContent();
-            toggleDrawer(false);
-        }
-    });
-
-    loadFiles();
-    document.querySelector('.nav-item[data-nav="all-files"]').classList.add('active');
-    document.querySelector('.top-tabs .tab[data-tab="all"]').classList.add('active');
-    document.querySelector('.sort-option[data-sort="date-desc"]').classList.add('active');
-    showContent('all-files');
+    if (deltaX < -50 && drawer.classList.contains('active')) {
+        toggleDrawer(false);
+    } else if (deltaX > 50 && !drawer.classList.contains('active')) {
+        toggleDrawer(true);
+    }
 });
