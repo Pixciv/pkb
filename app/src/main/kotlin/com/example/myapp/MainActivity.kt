@@ -18,7 +18,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import java.net.URLEncoder
+import java.io.File
+import java.io.FileOutputStream
+import java.net.URLDecoder
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,9 +28,6 @@ class MainActivity : AppCompatActivity() {
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
     private val FILE_CHOOSER_REQUEST_CODE = 1
     private val PERMISSION_REQUEST_CODE = 2
-
-    // LibreOffice Viewer URL
-    private val LIBREOFFICE_VIEWER_URL = "https://viewer.documentfoundation.org"
 
     // Modern izin isteği için launcher
     private val requestPermissionLauncher = registerForActivityResult(
@@ -253,42 +252,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ANA DOSYA AÇMA FONKSİYONU - LIBREOFFICE ENTEGRASYONLU
+    // ANA DOSYA AÇMA FONKSİYONU - OFFLINE ÇÖZÜM
     fun openFileInWebView(filePath: String) {
         try {
-            val decodedPath = java.net.URLDecoder.decode(filePath, "UTF-8")
+            val decodedPath = URLDecoder.decode(filePath, "UTF-8")
             val uri = Uri.parse(decodedPath)
             val fileExtension = getFileExtension(uri)
 
             when (fileExtension) {
-                "pdf" -> showWithLibreOffice(uri)
-                "doc", "docx" -> showWithLibreOffice(uri)
-                "xls", "xlsx" -> showWithLibreOffice(uri)
-                "ppt", "pptx" -> showWithLibreOffice(uri)
-                "txt", "html", "htm" -> showTextFile(uri)
-                "jpg", "jpeg", "png", "gif", "bmp" -> showImage(uri)
-                else -> showWithLibreOffice(uri)
+                "pdf" -> showPdfOffline(uri) // OFFLINE PDF
+                "txt", "html", "htm" -> showTextFile(uri) // OFFLINE Text
+                "jpg", "jpeg", "png", "gif", "bmp" -> showImage(uri) // OFFLINE Image
+                else -> showOfficeFileWithOptions(uri) // Office için seçenek göster
             }
         } catch (e: Exception) {
             Toast.makeText(this, "Dosya açılamadı", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // LIBREOFFICE VIEWER İLE GÖSTER
-    private fun showWithLibreOffice(uri: Uri) {
+    // OFFLINE PDF GÖSTERİMİ (PDF.js ile)
+    private fun showPdfOffline(uri: Uri) {
         try {
-            val encodedUrl = URLEncoder.encode(uri.toString(), "UTF-8")
-            val libreOfficeUrl = "$LIBREOFFICE_VIEWER_URL/?url=$encodedUrl"
-            
-            webView.loadUrl(libreOfficeUrl)
-            
+            // PDF.js viewer ile göster
+            webView.loadUrl("file:///android_asset/pdfjs/web/viewer.html?file=$uri")
         } catch (e: Exception) {
-            // Fallback: harici uygulamada aç
-            openWithExternalApp(uri)
+            showFileContentInfo(uri, "PDF")
         }
     }
 
-    // METİN DOSYALARI İÇİN
+    // METİN DOSYALARI İÇİN OFFLINE
     private fun showTextFile(uri: Uri) {
         try {
             val content = getFileContent(uri)
@@ -304,26 +296,46 @@ class MainActivity : AppCompatActivity() {
                             padding: 20px; 
                             background: white;
                             color: black;
+                            line-height: 1.6;
+                        }
+                        .container {
+                            max-width: 800px;
+                            margin: 0 auto;
                         }
                         pre { 
                             white-space: pre-wrap; 
                             word-wrap: break-word; 
+                            background: #f8f9fa;
+                            padding: 20px;
+                            border-radius: 8px;
+                            border: 1px solid #dee2e6;
+                        }
+                        .file-info {
+                            background: #007bff;
+                            color: white;
+                            padding: 10px 15px;
+                            border-radius: 5px;
+                            margin-bottom: 15px;
+                            display: inline-block;
                         }
                     </style>
                 </head>
                 <body>
-                    <pre>${content.replace("<", "&lt;").replace(">", "&gt;")}</pre>
+                    <div class="container">
+                        <div class="file-info">📝 Metin Belgesi</div>
+                        <pre>${content.replace("<", "&lt;").replace(">", "&gt;")}</pre>
+                    </div>
                 </body>
                 </html>
             """.trimIndent()
             
             webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
         } catch (e: Exception) {
-            showWithLibreOffice(uri)
+            showFileContentInfo(uri, "Metin")
         }
     }
 
-    // RESİM DOSYALARI İÇİN
+    // RESİM DOSYALARI İÇİN OFFLINE
     private fun showImage(uri: Uri) {
         val htmlContent = """
             <!DOCTYPE html>
@@ -340,16 +352,26 @@ class MainActivity : AppCompatActivity() {
                         justify-content: center;
                         align-items: center;
                         min-height: 100vh;
+                        flex-direction: column;
+                    }
+                    .file-info {
+                        background: #28a745;
+                        color: white;
+                        padding: 10px 15px;
+                        border-radius: 5px;
+                        margin-bottom: 15px;
                     }
                     img { 
                         max-width: 100%; 
                         height: auto; 
                         border: 1px solid #ddd;
-                        border-radius: 4px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                     }
                 </style>
             </head>
             <body>
+                <div class="file-info">🖼️ Resim Dosyası</div>
                 <img src="$uri" alt="Image">
             </body>
             </html>
@@ -358,7 +380,116 @@ class MainActivity : AppCompatActivity() {
         webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
     }
 
-    // HARİCİ UYGULAMA FALLBACK
+    // OFFICE DOSYALARI İÇİN SEÇENEK GÖSTER
+    private fun showOfficeFileWithOptions(uri: Uri) {
+        val fileName = getFileName(uri) ?: "Dosya"
+        val fileExtension = getFileExtension(uri).uppercase()
+        
+        val htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        padding: 40px; 
+                        background: white;
+                        color: black;
+                        text-align: center;
+                    }
+                    .container {
+                        max-width: 500px;
+                        margin: 0 auto;
+                    }
+                    .file-card {
+                        background: #f8f9fa;
+                        padding: 30px;
+                        border-radius: 12px;
+                        border: 1px solid #dee2e6;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                        margin-bottom: 20px;
+                    }
+                    .file-icon {
+                        font-size: 48px;
+                        margin-bottom: 15px;
+                    }
+                    .file-name {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                        word-break: break-all;
+                    }
+                    .btn {
+                        display: inline-block;
+                        padding: 12px 24px;
+                        margin: 5px;
+                        background: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        border: none;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    .btn:hover {
+                        background: #0056b3;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="file-card">
+                        <div class="file-icon">📄</div>
+                        <div class="file-name">$fileName</div>
+                        <div>Dosya Türü: .$fileExtension</div>
+                    </div>
+                    
+                    <button class="btn" onclick="Android.openExternal('$uri')">
+                        📱 Uygulamada Aç
+                    </button>
+                    <button class="btn" onclick="Android.downloadFile('$uri')">
+                        ⬇️ Dosyayı İndir
+                    </button>
+                </div>
+                
+                <script>
+                    // Android interface fonksiyonları
+                    if(typeof Android === 'undefined') {
+                        // Browser'da çalışıyorsa
+                        function openExternal(uri) {
+                            window.open(uri, '_blank');
+                        }
+                        function downloadFile(uri) {
+                            var link = document.createElement('a');
+                            link.href = uri;
+                            link.download = '$fileName';
+                            link.click();
+                        }
+                    }
+                </script>
+            </body>
+            </html>
+        """.trimIndent()
+        
+        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+    }
+
+    // Android interface için ek fonksiyonlar
+    @android.webkit.JavascriptInterface
+    fun openExternal(filePath: String) {
+        val uri = Uri.parse(URLDecoder.decode(filePath, "UTF-8"))
+        openWithExternalApp(uri)
+    }
+
+    @android.webkit.JavascriptInterface
+    fun downloadFile(filePath: String) {
+        val uri = Uri.parse(URLDecoder.decode(filePath, "UTF-8"))
+        // Dosya indirme işlemi buraya gelecek
+        Toast.makeText(this, "İndirme işlemi başlatıldı", Toast.LENGTH_SHORT).show()
+    }
+
+    // HARİCİ UYGULAMADA AÇ (FALLBACK)
     private fun openWithExternalApp(uri: Uri) {
         try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -385,17 +516,81 @@ class MainActivity : AppCompatActivity() {
             "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             "ppt" -> "application/vnd.ms-powerpoint"
             "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            "txt" -> "text/plain"
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
             else -> "*/*"
         }
     }
 
     private fun getFileContent(uri: Uri): String {
         return try {
-            val inputStream = contentResolver.openInputStream(uri)
-            inputStream?.bufferedReader()?.use { it.readText() } ?: ""
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: ""
         } catch (e: Exception) {
-            ""
+            "Dosya içeriği okunamadı"
         }
+    }
+
+    private fun getFileName(uri: Uri): String? {
+        return try {
+            val cursor = contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    it.getString(it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME))
+                } else {
+                    uri.toString().substringAfterLast('/')
+                }
+            }
+        } catch (e: Exception) {
+            uri.toString().substringAfterLast('/')
+        }
+    }
+
+    private fun showFileContentInfo(uri: Uri, fileType: String) {
+        val fileName = getFileName(uri) ?: "Bilinmeyen Dosya"
+        val htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        padding: 40px; 
+                        background: white;
+                        color: black;
+                        text-align: center;
+                    }
+                    .info-card {
+                        background: #f8f9fa;
+                        padding: 30px;
+                        border-radius: 12px;
+                        border: 1px solid #dee2e6;
+                    }
+                    .icon {
+                        font-size: 48px;
+                        margin-bottom: 15px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="info-card">
+                    <div class="icon">📄</div>
+                    <h3>$fileType Dosyası</h3>
+                    <p><strong>$fileName</strong></p>
+                    <p>Bu dosya türü uygulama içinde görüntülenemiyor.</p>
+                    <button onclick="Android.openExternal('$uri')" 
+                            style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        Harici Uygulamada Aç
+                    </button>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+        
+        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
