@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("file:///android_asset/index.html")
     }
 
-            override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == FILECHOOSER_RESULTCODE) {
             if (mUploadMessage == null) {
@@ -109,8 +109,6 @@ class MainActivity : AppCompatActivity() {
             mUploadMessage = null
         }
     }
-
-
 
     override fun onBackPressed() {
         if (webView.canGoBack()) {
