@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        setContentView(webView) // <-- Bu satır WebView'i ekrana ekler
+        setContentView(webView)
 
         // assets içindeki HTML dosyasını aç
         webView.loadUrl("file:///android_asset/index.html")
@@ -96,8 +96,9 @@ class MainActivity : AppCompatActivity() {
             if (mUploadMessage == null) {
                 return
             }
+            val result = if (data == null || resultCode != RESULT_OK) null else data
             mUploadMessage!!.onReceiveValue(
-                WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+                WebChromeClient.FileChooserParams.parseResult(resultCode, result)
             )
             mUploadMessage = null
         }
@@ -111,4 +112,3 @@ class MainActivity : AppCompatActivity() {
         }
     }
 }
-
