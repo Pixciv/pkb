@@ -1,5 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <cache-path name="cache" path="."/>
-    <external-path name="external" path="."/>
+
+    <!-- Uygulamanın cache klasörüne erişim -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Uygulamanın internal files klasörüne erişim -->
+    <files-path
+        name="files"
+        path="." />
+
+    <!-- External storage erişimi -->
+    <external-path
+        name="external"
+        path="." />
+
+    <!-- Downloads klasörü için erişim (isteğe bağlı) -->
+    <external-path
+        name="downloads"
+        path="Download/" />
+
 </paths>
