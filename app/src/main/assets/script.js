@@ -38,95 +38,73 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectionMode = false;
     let selectedFiles = [];
 
+    // Load files from localStorage
     function loadFiles() {
         const storedFiles = localStorage.getItem('allFiles');
-        if (storedFiles) {
-            allFiles = JSON.parse(storedFiles);
-        }
+        if (storedFiles) allFiles = JSON.parse(storedFiles);
     }
-
     function saveFiles() {
         localStorage.setItem('allFiles', JSON.stringify(allFiles));
     }
+    loadFiles();
 
+    // Dark mode setup
     const isDarkMode = localStorage.getItem('darkMode') === 'true';
     if (isDarkMode) {
         document.body.classList.add('dark-mode');
         darkModeToggle.checked = true;
     }
 
+    // Navigation
     function showContent(navId) {
         contentSections.forEach(section => {
-            if (section.id === `${navId}-content`) {
-                section.classList.add('active');
-            } else {
-                section.classList.remove('active');
-            }
+            section.classList.toggle('active', section.id === `${navId}-content`);
         });
-
         document.querySelector('.top-tabs').style.display = navId === 'all-files' ? 'flex' : 'none';
         headerTitle.textContent = navId === 'all-files' ? 'All PDF Reader' :
                                   navId === 'recent' ? 'Son Kullanılanlar' :
                                   navId === 'favorites' ? 'Favoriler' :
                                   navId === 'tools' ? 'Araçlar' : 'All PDF Reader';
-
         backButton.style.display = navId === 'all-files' ? 'none' : 'block';
         drawerToggle.style.display = navId === 'all-files' ? 'block' : 'none';
         sortIcon.style.display = 'block';
         searchIcon.style.display = 'block';
-        
         exitSelectionMode();
         renderCurrentContent();
     }
 
+    // Render files
     function renderContent(files, targetElement, fileTypeFilter = 'all', sortCriteria = 'date-desc', searchTerm = '') {
         targetElement.innerHTML = '';
         fileMenuPopup.style.display = 'none';
-    
+
         let filesToRender = [...files];
-    
-        if (fileTypeFilter !== 'all') {
-            const types = {
-                'pdf': ['pdf'],
-                'word': ['docx', 'doc'],
-                'excel': ['xlsx', 'xls'],
-                'ppt': ['pptx', 'ppt']
-            };
-            filesToRender = filesToRender.filter(item => types[fileTypeFilter].includes(item.type));
-        }
-    
-        if (searchTerm) {
-            filesToRender = filesToRender.filter(item =>
-                item.name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-    
-        const activeNavId = document.querySelector('.bottom-nav .nav-item.active').getAttribute('data-nav');
-        if (activeNavId === 'favorites') {
-            filesToRender = filesToRender.filter(item => item.isFavorite);
-        }
-    
-        filesToRender.sort((a, b) => {
-            if (sortCriteria === 'date-desc') {
-                return new Date(b.date) - new Date(a.date);
-            } else if (sortCriteria === 'date-asc') {
-                return new Date(a.date) - new Date(b.date);
-            } else if (sortCriteria === 'name-asc') {
-                return a.name.localeCompare(b.name);
-            } else if (sortCriteria === 'name-desc') {
-                return b.name.localeCompare(a.name);
-            } else if (sortCriteria === 'size-asc') {
-                const sizeA = parseFloat(a.size.replace(',', '.').replace(' kB', ''));
-                const sizeB = parseFloat(b.size.replace(',', '.').replace(' kB', ''));
-                return sizeA - sizeB;
-            } else if (sortCriteria === 'size-desc') {
-                const sizeA = parseFloat(a.size.replace(',', '.').replace(' kB', ''));
-                const sizeB = parseFloat(b.size.replace(',', '.').replace(' kB', ''));
-                return sizeB - sizeA;
+
+        const typesMap = {
+            'pdf': ['pdf'],
+            'word': ['doc', 'docx'],
+            'excel': ['xls', 'xlsx'],
+            'ppt': ['ppt', 'pptx']
+        };
+        if (fileTypeFilter !== 'all') filesToRender = filesToRender.filter(f => typesMap[fileTypeFilter].includes(f.type));
+        if (searchTerm) filesToRender = filesToRender.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+        const activeNavId = document.querySelector('.bottom-nav .nav-item.active').dataset.nav;
+        if (activeNavId === 'favorites') filesToRender = filesToRender.filter(f => f.isFavorite);
+
+        // Sorting
+        filesToRender.sort((a,b) => {
+            switch(sortCriteria){
+                case 'date-desc': return new Date(b.date)-new Date(a.date);
+                case 'date-asc': return new Date(a.date)-new Date(b.date);
+                case 'name-asc': return a.name.localeCompare(b.name);
+                case 'name-desc': return b.name.localeCompare(a.name);
+                case 'size-asc': return parseFloat(a.size.replace(',', '.').replace(' kB','')) - parseFloat(b.size.replace(',', '.').replace(' kB',''));
+                case 'size-desc': return parseFloat(b.size.replace(',', '.').replace(' kB','')) - parseFloat(a.size.replace(',', '.').replace(' kB',''));
+                default: return 0;
             }
-            return 0;
         });
-    
+
         if (filesToRender.length === 0) {
             targetElement.innerHTML = `<div class="empty-state">
                 <i class="fas fa-folder-open fa-3x"></i>
@@ -134,349 +112,266 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>`;
             return;
         }
-    
+
         filesToRender.forEach(item => {
             const fileItem = document.createElement('div');
             fileItem.className = 'file-item';
-            if (selectionMode) {
-                fileItem.classList.add('selection-mode');
-            }
-    
-            let iconClass = '';
-            switch (item.type) {
-                case 'pdf':
-                    iconClass = 'fa-file-pdf';
-                    break;
-                case 'docx':
-                case 'doc':
-                    iconClass = 'fa-file-word';
-                    break;
-                case 'xlsx':
-                case 'xls':
-                    iconClass = 'fa-file-excel';
-                    break;
-                case 'ppt':
-                case 'pptx':
-                    iconClass = 'fa-file-powerpoint';
-                    break;
-                default:
-                    iconClass = 'fa-file';
-            }
-            
-            const isSelected = selectedFiles.some(f => f.name === item.name);
+            if (selectionMode) fileItem.classList.add('selection-mode');
+
+            let iconClass = 'fa-file';
+            if(item.type==='pdf') iconClass='fa-file-pdf';
+            else if(['doc','docx'].includes(item.type)) iconClass='fa-file-word';
+            else if(['xls','xlsx'].includes(item.type)) iconClass='fa-file-excel';
+            else if(['ppt','pptx'].includes(item.type)) iconClass='fa-file-powerpoint';
+
+            const isSelected = selectedFiles.some(f=>f.name===item.name);
 
             fileItem.innerHTML = `
-                <div class="file-item-wrapper">
-                    <input type="checkbox" class="file-checkbox" ${isSelected ? 'checked' : ''} data-filename="${item.name}">
-                    <div class="file-icon-container">
-                        <i class="fas ${iconClass} file-icon"></i>
-                    </div>
-                    <div class="file-info">
-                        <div class="file-name">${item.name}</div>
-                        <div class="file-details">${item.date} · ${item.size}</div>
-                    </div>
-                    <div class="file-actions">
-                        <i class="favorite-icon ${item.isFavorite ? 'fas fa-star' : 'far fa-star'}" data-filename="${item.name}"></i>
-                        <i class="fas fa-ellipsis-v file-menu" data-filename="${item.name}"></i>
-                    </div>
+            <div class="file-item-wrapper">
+                <input type="checkbox" class="file-checkbox" ${isSelected?'checked':''} data-filename="${item.name}">
+                <div class="file-icon-container"><i class="fas ${iconClass} file-icon"></i></div>
+                <div class="file-info">
+                    <div class="file-name">${item.name}</div>
+                    <div class="file-details">${item.date} · ${item.size}</div>
                 </div>
-            `;
-            
+                <div class="file-actions">
+                    <i class="favorite-icon ${item.isFavorite?'fas fa-star':'far fa-star'}" data-filename="${item.name}"></i>
+                    <i class="fas fa-ellipsis-v file-menu" data-filename="${item.name}"></i>
+                </div>
+            </div>`;
+
             const checkbox = fileItem.querySelector('.file-checkbox');
             const fileItemWrapper = fileItem.querySelector('.file-item-wrapper');
 
-            fileItemWrapper.addEventListener('click', (e) => {
-                if (selectionMode) {
-                    if (e.target.classList.contains('file-item-wrapper') || e.target.closest('.file-info')) {
-                        e.stopPropagation(); 
-                        checkbox.checked = !checkbox.checked;
-                        checkbox.dispatchEvent(new Event('change'));
-                    }
+            fileItemWrapper.addEventListener('click', e=>{
+                if(selectionMode && (e.target.classList.contains('file-item-wrapper') || e.target.closest('.file-info'))){
+                    e.stopPropagation();
+                    checkbox.checked=!checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
                 }
             });
-            
-            checkbox.addEventListener('change', (e) => {
-                const fileName = e.target.getAttribute('data-filename');
-                const file = allFiles.find(f => f.name === fileName);
-                if (e.target.checked) {
-                    selectedFiles.push(file);
-                } else {
-                    selectedFiles = selectedFiles.filter(f => f.name !== fileName);
-                }
+
+            checkbox.addEventListener('change', e=>{
+                const fileName=e.target.dataset.filename;
+                const file = allFiles.find(f=>f.name===fileName);
+                if(e.target.checked) selectedFiles.push(file);
+                else selectedFiles = selectedFiles.filter(f=>f.name!==fileName);
                 updateSelectionCount();
             });
-            
 
             const favoriteIcon = fileItem.querySelector('.favorite-icon');
-            favoriteIcon.addEventListener('click', (e) => {
+            favoriteIcon.addEventListener('click', e=>{
                 e.stopPropagation();
-                toggleFavorite(e.target.getAttribute('data-filename'));
+                toggleFavorite(e.target.dataset.filename);
             });
 
             const fileMenuIcon = fileItem.querySelector('.file-menu');
-            fileMenuIcon.addEventListener('click', (e) => {
+            fileMenuIcon.addEventListener('click', e=>{
                 e.stopPropagation();
-                showFileMenu(e.target, e.target.getAttribute('data-filename'));
+                showFileMenu(e.target, e.target.dataset.filename);
             });
-    
+
             targetElement.appendChild(fileItem);
         });
     }
 
-    function updateSelectionCount() {
-        selectionCount.textContent = `${selectedFiles.length} Dosya Seçildi`;
-        selectionDelete.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-        selectionMove.style.display = selectedFiles.length > 0 ? 'block' : 'none';
-        selectionShare.style.display = selectedFiles.length > 0 ? 'block' : 'none';
+    function updateSelectionCount(){
+        selectionCount.textContent=`${selectedFiles.length} Dosya Seçildi`;
+        selectionDelete.style.display = selectedFiles.length>0?'block':'none';
+        selectionMove.style.display = selectedFiles.length>0?'block':'none';
+        selectionShare.style.display = selectedFiles.length>0?'block':'none';
     }
 
-    function toggleFavorite(fileName) {
-        const file = allFiles.find(f => f.name === fileName);
-        if (file) {
-            file.isFavorite = !file.isFavorite;
-            saveFiles();
-            renderCurrentContent();
+    function toggleFavorite(fileName){
+        const file = allFiles.find(f=>f.name===fileName);
+        if(file){ file.isFavorite=!file.isFavorite; saveFiles(); renderCurrentContent(); }
+    }
+
+    function renameFile(oldName){
+        const file = allFiles.find(f=>f.name===oldName);
+        if(file){
+            const newName = prompt("Dosyayı yeniden adlandır:", file.name);
+            if(newName && newName!==file.name){ file.name=newName; saveFiles(); renderCurrentContent(); }
         }
     }
-    
-    function renameFile(oldName) {
-        const file = allFiles.find(f => f.name === oldName);
-        if (file) {
-            const newName = window.prompt("Dosyayı yeniden adlandır:", file.name);
-            if (newName && newName !== file.name) {
-                file.name = newName;
-                saveFiles();
-                renderCurrentContent();
-            }
-        }
-    }
-    
-    function deleteFile(fileName) {
-        if (window.confirm(`${fileName} dosyasını silmek istediğinizden emin misiniz?`)) {
-            allFiles = allFiles.filter(f => f.name !== fileName);
+
+    function deleteFile(fileName){
+        if(confirm(`${fileName} dosyasını silmek istediğinizden emin misiniz?`)){
+            allFiles = allFiles.filter(f=>f.name!==fileName);
             saveFiles();
             renderCurrentContent();
         }
     }
 
-    function deleteSelectedFiles() {
-        if (selectedFiles.length > 0 && window.confirm(`${selectedFiles.length} dosyayı silmek istediğinizden emin misiniz?`)) {
-            const selectedNames = selectedFiles.map(f => f.name);
-            allFiles = allFiles.filter(f => !selectedNames.includes(f.name));
+    function deleteSelectedFiles(){
+        if(selectedFiles.length>0 && confirm(`${selectedFiles.length} dosyayı silmek istediğinizden emin misiniz?`)){
+            const selectedNames = selectedFiles.map(f=>f.name);
+            allFiles = allFiles.filter(f=>!selectedNames.includes(f.name));
             saveFiles();
             exitSelectionMode();
         }
     }
 
     selectionDelete.addEventListener('click', deleteSelectedFiles);
-    selectionMove.addEventListener('click', () => {
-        alert("Dosyalar taşınıyor...");
-        exitSelectionMode();
-    });
-    selectionShare.addEventListener('click', () => {
-        alert("Dosyalar paylaşılıyor...");
-        exitSelectionMode();
-    });
-    
-    function showFileMenu(targetIcon, fileName) {
+    selectionMove.addEventListener('click', ()=>{ alert("Dosyalar taşınıyor..."); exitSelectionMode(); });
+    selectionShare.addEventListener('click', ()=>{ alert("Dosyalar paylaşılıyor..."); exitSelectionMode(); });
+
+    function showFileMenu(targetIcon, fileName){
         const rect = targetIcon.getBoundingClientRect();
-        fileMenuPopup.style.top = `${rect.bottom + 5}px`;
-        fileMenuPopup.style.left = `${rect.left - 150}px`;
-        fileMenuPopup.style.display = 'block';
-        fileMenuPopup.setAttribute('data-target-file', fileName);
+        fileMenuPopup.style.top=`${rect.bottom+5}px`;
+        fileMenuPopup.style.left=`${rect.left-150}px`;
+        fileMenuPopup.style.display='block';
+        fileMenuPopup.dataset.targetFile=fileName;
 
-        const file = allFiles.find(f => f.name === fileName);
+        const file = allFiles.find(f=>f.name===fileName);
         const favoriteMenuItem = fileMenuPopup.querySelector('.menu-favorite span');
-        favoriteMenuItem.textContent = file.isFavorite ? 'Favorilerden Kaldır' : 'Favorilere Ekle';
-        fileMenuPopup.querySelector('.menu-favorite i').className = file.isFavorite ? 'fas fa-star' : 'far fa-star';
+        favoriteMenuItem.textContent = file.isFavorite?'Favorilerden Kaldır':'Favorilere Ekle';
+        fileMenuPopup.querySelector('.menu-favorite i').className = file.isFavorite?'fas fa-star':'far fa-star';
     }
 
-    function renderCurrentContent() {
-        const activeNav = document.querySelector('.bottom-nav .nav-item.active').getAttribute('data-nav');
-        let targetElement = fileListContent;
-        let filesToRender = allFiles;
+    fileMenuPopup.addEventListener('click', e=>{
+        const action = e.target.closest('li').dataset.action;
+        const fileName = fileMenuPopup.dataset.targetFile;
+        if(action==='toggle-favorite') toggleFavorite(fileName);
+        else if(action==='rename') renameFile(fileName);
+        else if(action==='delete') deleteFile(fileName);
+        fileMenuPopup.style.display='none';
+    });
 
-        if (activeNav === 'favorites') {
-            targetElement = favoritesListContent;
-        } else if (activeNav === 'all-files') {
-             targetElement = fileListContent;
+    document.addEventListener('click', e=>{
+        if(!fileMenuPopup.contains(e.target) && !e.target.classList.contains('file-menu')){
+            fileMenuPopup.style.display='none';
         }
+    });
 
+    function renderCurrentContent(){
+        const activeNav = document.querySelector('.bottom-nav .nav-item.active').dataset.nav;
+        let targetElement = activeNav==='favorites'?favoritesListContent:fileListContent;
         const activeTab = document.querySelector('.top-tabs .tab.active');
-        const activeTabType = activeTab ? activeTab.getAttribute('data-tab') : 'all';
-        const currentSort = document.querySelector('.sort-option.active').getAttribute('data-sort');
+        const activeTabType = activeTab ? activeTab.dataset.tab:'all';
+        const currentSort = document.querySelector('.sort-option.active').dataset.sort;
         const currentSearchTerm = searchInput.value;
-
-        renderContent(filesToRender, targetElement, activeTabType, currentSort, currentSearchTerm);
+        renderContent(allFiles, targetElement, activeTabType, currentSort, currentSearchTerm);
     }
-    
-    function enterSelectionMode() {
-        selectionMode = true;
-        selectedFiles = [];
-        mainHeader.style.display = 'none';
-        selectionHeader.style.display = 'flex';
-        bottomNav.style.display = 'none';
+
+    function enterSelectionMode(){
+        selectionMode=true;
+        selectedFiles=[];
+        mainHeader.style.display='none';
+        selectionHeader.style.display='flex';
+        bottomNav.style.display='none';
         document.body.classList.add('selection-mode');
         renderCurrentContent();
         updateSelectionCount();
     }
-    
-    function exitSelectionMode() {
-        selectionMode = false;
-        selectedFiles = [];
-        mainHeader.style.display = 'flex';
-        selectionHeader.style.display = 'none';
-        bottomNav.style.display = 'flex';
+
+    function exitSelectionMode(){
+        selectionMode=false;
+        selectedFiles=[];
+        mainHeader.style.display='flex';
+        selectionHeader.style.display='none';
+        bottomNav.style.display='flex';
         document.body.classList.remove('selection-mode');
         renderCurrentContent();
     }
-    
+
     selectIcon.addEventListener('click', enterSelectionMode);
     selectionCancel.addEventListener('click', exitSelectionMode);
-    
-    selectionAll.addEventListener('click', () => {
-        const allCheckboxes = document.querySelectorAll('.file-checkbox');
-        const allSelected = allCheckboxes.length > 0 && selectedFiles.length === allCheckboxes.length;
-        
-        selectedFiles = [];
-        allCheckboxes.forEach(checkbox => {
-            if (!allSelected) {
-                checkbox.checked = true;
-                const fileName = checkbox.getAttribute('data-filename');
-                const file = allFiles.find(f => f.name === fileName);
-                if (file) {
-                    selectedFiles.push(file);
-                }
-            } else {
-                checkbox.checked = false;
+
+    selectionAll.addEventListener('click', ()=>{
+        const allCheckboxes=document.querySelectorAll('.file-checkbox');
+        const allSelected = selectedFiles.length===allCheckboxes.length;
+        selectedFiles=[];
+        allCheckboxes.forEach(checkbox=>{
+            checkbox.checked = !allSelected;
+            if(!allSelected){
+                const fileName = checkbox.dataset.filename;
+                const file = allFiles.find(f=>f.name===fileName);
+                if(file) selectedFiles.push(file);
             }
         });
         updateSelectionCount();
     });
-    
-    document.addEventListener('click', (e) => {
-        if (!fileMenuPopup.contains(e.target) && !e.target.classList.contains('file-menu')) {
-            fileMenuPopup.style.display = 'none';
-        }
-    });
 
-    fileMenuPopup.addEventListener('click', (e) => {
-        const action = e.target.closest('li').getAttribute('data-action');
-        const fileName = fileMenuPopup.getAttribute('data-target-file');
-
-        if (action === 'toggle-favorite') {
-            toggleFavorite(fileName);
-        } else if (action === 'rename') {
-            renameFile(fileName);
-        } else if (action === 'delete') {
-            deleteFile(fileName);
-        }
-        fileMenuPopup.style.display = 'none';
-    });
-
-    searchIcon.addEventListener('click', () => {
-        headerTitle.style.display = 'none';
-        headerIcons.style.display = 'none';
-        drawerToggle.style.display = 'none';
-        backButton.style.display = 'none';
-        searchBar.style.display = 'flex';
+    searchIcon.addEventListener('click', ()=>{
+        headerTitle.style.display='none';
+        headerIcons.style.display='none';
+        drawerToggle.style.display='none';
+        backButton.style.display='none';
+        searchBar.style.display='flex';
         searchInput.focus();
     });
 
-    searchBack.addEventListener('click', () => {
-        headerTitle.style.display = 'block';
-        headerIcons.style.display = 'flex';
-        drawerToggle.style.display = 'block';
-        backButton.style.display = 'none';
-        searchBar.style.display = 'none';
-        searchInput.value = '';
+    searchBack.addEventListener('click', ()=>{
+        headerTitle.style.display='block';
+        headerIcons.style.display='flex';
+        drawerToggle.style.display='block';
+        backButton.style.display='none';
+        searchBar.style.display='none';
+        searchInput.value='';
         renderCurrentContent();
     });
 
-    searchClear.addEventListener('click', () => {
-        searchInput.value = '';
+    searchClear.addEventListener('click', ()=>{
+        searchInput.value='';
         searchInput.focus();
         renderCurrentContent();
     });
 
-    searchInput.addEventListener('input', () => {
-        renderCurrentContent();
-    });
+    searchInput.addEventListener('input', renderCurrentContent);
 
-    sortIcon.addEventListener('click', () => {
-        sortPopup.style.display = 'flex';
-    });
-
-    sortCancelButton.addEventListener('click', () => {
-        sortPopup.style.display = 'none';
-    });
-
-    sortOptions.forEach(option => {
-        option.addEventListener('click', () => {
-            sortOptions.forEach(opt => opt.classList.remove('active'));
+    sortIcon.addEventListener('click', ()=> sortPopup.style.display='flex');
+    sortCancelButton.addEventListener('click', ()=> sortPopup.style.display='none');
+    sortOptions.forEach(option=>{
+        option.addEventListener('click', ()=>{
+            sortOptions.forEach(opt=>opt.classList.remove('active'));
             option.classList.add('active');
         });
     });
-
-    sortApplyButton.addEventListener('click', () => {
-        sortPopup.style.display = 'none';
+    sortApplyButton.addEventListener('click', ()=>{
+        sortPopup.style.display='none';
         renderCurrentContent();
     });
 
-    topTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            topTabs.forEach(t => t.classList.remove('active'));
+    topTabs.forEach(tab=>{
+        tab.addEventListener('click', ()=>{
+            topTabs.forEach(t=>t.classList.remove('active'));
             tab.classList.add('active');
             renderCurrentContent();
         });
     });
 
-    function toggleDrawer(open) {
-        if (open) {
-            drawer.classList.add('active');
-            overlay.classList.add('active');
-        } else {
-            drawer.classList.remove('active');
-            overlay.classList.remove('active');
-        }
+    function toggleDrawer(open){
+        drawer.classList.toggle('active', open);
+        overlay.classList.toggle('active', open);
     }
+    drawerToggle.addEventListener('click', ()=>toggleDrawer(true));
+    overlay.addEventListener('click', ()=>toggleDrawer(false));
 
-    drawerToggle.addEventListener('click', () => {
-        toggleDrawer(true);
-    });
-
-    overlay.addEventListener('click', () => {
-        toggleDrawer(false);
-    });
-
-    backButton.addEventListener('click', () => {
-        bottomNavItems.forEach(item => item.classList.remove('active'));
+    backButton.addEventListener('click', ()=>{
+        bottomNavItems.forEach(item=>item.classList.remove('active'));
         document.querySelector('.nav-item[data-nav="all-files"]').classList.add('active');
         document.querySelector('.top-tabs .tab[data-tab="all"]').classList.add('active');
         showContent('all-files');
     });
 
-    bottomNavItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const navId = item.getAttribute('data-nav');
-            bottomNavItems.forEach(nav => nav.classList.remove('active'));
+    bottomNavItems.forEach(item=>{
+        item.addEventListener('click', ()=>{
+            const navId=item.dataset.nav;
+            bottomNavItems.forEach(nav=>nav.classList.remove('active'));
             item.classList.add('active');
             showContent(navId);
         });
     });
 
-    let touchStartX = 0;
-document.addEventListener('touchstart', (e) => {
-    touchStartX = e.touches[0].clientX;
-});
+    // Swipe drawer
+    let touchStartX=0;
+    document.addEventListener('touchstart', e=>{ touchStartX=e.touches[0].clientX; });
+    document.addEventListener('touchend', e=>{
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        if(deltaX<-50 && drawer.classList.contains('active')) toggleDrawer(false);
+        else if(deltaX>50 && !drawer.classList.contains('active')) toggleDrawer(true);
+    });
 
-document.addEventListener('touchend', (e) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const deltaX = touchEndX - touchStartX;
-
-    if (deltaX < -50 && drawer.classList.contains('active')) {
-        toggleDrawer(false);
-    } else if (deltaX > 50 && !drawer.classList.contains('active')) {
-        toggleDrawer(true);
-    }
+    renderCurrentContent();
 });
