@@ -3,7 +3,6 @@ package com.arvinapp.acgb
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.webkit.WebChromeClient
 import android.webkit.WebView
@@ -28,24 +27,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             webViewClient = WebViewClient()
             webChromeClient = WebChromeClient()
         }
-
         setContentView(webView)
+        webView.addJavascriptInterface(JSInterface(), "Android")
         webView.loadUrl("file:///android_asset/index.html")
-    }
-
-    override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
-        }
     }
 
     fun openFilePicker() {
@@ -56,17 +46,23 @@ class MainActivity : AppCompatActivity() {
                 "application/pdf",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-powerpoint"
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             ))
         }
         filePickerLauncher.launch(intent)
     }
 
     private fun handleImportedFile(uri: Uri) {
-        // URI'yi WebView tarafına JS üzerinden iletebilirsin
-        webView.evaluateJavascript(
-            "handleImportedFileFromAndroid('${uri.toString()}');",
-            null
-        )
+        webView.evaluateJavascript("handleImportedFileFromAndroid('${uri.toString()}');", null)
+    }
+
+    inner class JSInterface {
+        @android.webkit.JavascriptInterface
+        fun pickFile() {
+            runOnUiThread {
+                openFilePicker()
+            }
+        }
     }
 }
