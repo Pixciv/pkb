@@ -25,10 +25,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Dosya erişim izinlerini kontrol et
         checkPermissions()
     }
 
     private fun checkPermissions() {
+        // Eğer Android 6.0 (M) veya üstüyse, izinleri iste
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val readPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
             val writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -40,15 +42,18 @@ class MainActivity : AppCompatActivity() {
                     PERMISSION_REQUEST_CODE
                 )
             } else {
+                // İzinler zaten verilmiş, WebView'i ayarla
                 setupWebView()
             }
         } else {
+            // Android 6.0 altı için izinler otomatik verilir, WebView'i ayarla
             setupWebView()
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        // İzin isteğinin sonucunu kontrol et
         if (requestCode == PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 setupWebView()
@@ -86,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         }
         setContentView(webView)
 
-        // assets içindeki HTML dosyasını aç
+        // assets klasöründeki HTML dosyasını aç
         webView.loadUrl("file:///android_asset/index.html")
     }
 
@@ -96,6 +101,7 @@ class MainActivity : AppCompatActivity() {
             if (mUploadMessage == null) {
                 return
             }
+            // `data` değişkeninin null olup olmadığını ve sonucun başarılı olup olmadığını kontrol et
             val result = if (data == null || resultCode != RESULT_OK) null else data
             mUploadMessage!!.onReceiveValue(
                 WebChromeClient.FileChooserParams.parseResult(resultCode, result)
