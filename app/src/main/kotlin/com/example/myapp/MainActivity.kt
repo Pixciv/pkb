@@ -40,7 +40,6 @@ class MainActivity : AppCompatActivity() {
     private val settingsLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        // Ayarlardan dönüldüğünde izinleri tekrar kontrol et
         checkPermissions()
     }
 
@@ -51,14 +50,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ için MANAGE_EXTERNAL_STORAGE veya dosya erişim izni kontrolü
             if (Environment.isExternalStorageManager()) {
                 setupWebView()
             } else {
                 requestStoragePermission()
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Android 6.0-10 için READ_EXTERNAL_STORAGE izni
             if (ContextCompat.checkSelfPermission(
                     this,
                     Manifest.permission.READ_EXTERNAL_STORAGE
@@ -69,17 +66,14 @@ class MainActivity : AppCompatActivity() {
                 requestStoragePermission()
             }
         } else {
-            // Android 6.0 altı için izin gerekmez
             setupWebView()
         }
     }
 
     private fun requestStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            // Android 11+ için tüm dosyalara erişim izni iste
             showAndroid11PermissionDialog()
         } else {
-            // Android 6.0-10 için runtime izin iste
             requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
     }
@@ -87,7 +81,7 @@ class MainActivity : AppCompatActivity() {
     private fun showAndroid11PermissionDialog() {
         AlertDialog.Builder(this)
             .setTitle("Dosya Erişim İzni Gerekli")
-            .setMessage("Dosyaları içe aktarmak için tüm dosyalara erişim izni vermeniz gerekiyor. 'Ayarlara Git' butonuna tıklayıp 'Tüm dosyalara erişim izni ver' seçeneğini etkinleştirin.")
+            .setMessage("Dosyaları açmak ve görüntülemek için tüm dosyalara erişim izni vermeniz gerekiyor.")
             .setPositiveButton("Ayarlara Git") { dialog, _ ->
                 dialog.dismiss()
                 openStorageSettings()
@@ -102,13 +96,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun openStorageSettings() {
         try {
-            // Android 11+ için doğru ayar ekranını aç
             val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
             intent.data = Uri.parse("package:$packageName")
             settingsLauncher.launch(intent)
         } catch (e: Exception) {
             try {
-                // Fallback: genel ayarlar ekranı
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 intent.data = Uri.parse("package:$packageName")
                 settingsLauncher.launch(intent)
@@ -122,7 +114,7 @@ class MainActivity : AppCompatActivity() {
     private fun showPermissionDeniedDialog() {
         AlertDialog.Builder(this)
             .setTitle("İzin Reddedildi")
-            .setMessage("Dosya erişim iznini reddettiniz. Uygulamayı sınırlı modda kullanabilirsiniz, ancak dosya içe aktarma özelliği çalışmayacaktır.")
+            .setMessage("Dosya erişim iznini reddettiniz. Dosya açma özelliği çalışmayacaktır.")
             .setPositiveButton("Tamam") { dialog, _ ->
                 dialog.dismiss()
                 setupWebViewWithLimitedAccess()
@@ -150,7 +142,21 @@ class MainActivity : AppCompatActivity() {
             settings.allowFileAccess = hasStoragePermission
             settings.allowContentAccess = hasStoragePermission
             
-            webViewClient = WebViewClient()
+            // JavaScript ile Android arasındaki iletişim için
+            addJavascriptInterface(WebAppInterface(this@MainActivity), "Android")
+            
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                    // Uygulama içinde kal, harici linkleri engelle
+                    return if (url?.startsWith("http") == true) {
+                        // Harici linkleri WebView'de aç
+                        false
+                    } else {
+                        // Diğer tüm linkleri uygulama içinde işle
+                        true
+                    }
+                }
+            }
             
             webChromeClient = object : WebChromeClient() {
                 override fun onShowFileChooser(
@@ -162,10 +168,9 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread {
                             Toast.makeText(
                                 this@MainActivity,
-                                "Dosya erişim izni gerekli. Lütfen ayarlardan izin verin.",
+                                "Dosya erişim izni gerekli",
                                 Toast.LENGTH_LONG
                             ).show()
-                            // İzin yoksa kullanıcıyı ayarlara yönlendir
                             openStorageSettings()
                         }
                         callback?.onReceiveValue(null)
@@ -203,6 +208,215 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("file:///android_asset/index.html")
     }
 
+    // JavaScript ile iletişim için class - DOSYA AÇMA ÖZELLİĞİ
+    class WebAppInterface(private val activity: MainActivity) {
+        @android.webkit.JavascriptInterface
+        fun openFile(filePath: String) {
+            activity.runOnUiThread {
+                activity.openFileInWebView(filePath)
+            }
+        }
+        
+        @android.webkit.JavascriptInterface
+        fun getFileContent(filePath: String): String {
+            return activity.getFileContentAsString(filePath)
+        }
+    }
+
+    // Dosya içeriğini string olarak oku
+    private fun getFileContentAsString(filePath: String): String {
+        return try {
+            val uri = Uri.parse(filePath)
+            val inputStream = contentResolver.openInputStream(uri)
+            val content = inputStream?.bufferedReader().use { it?.readText() } ?: ""
+            content
+        } catch (e: Exception) {
+            "Dosya okunamadı: ${e.message}"
+        }
+    }
+
+    // Dosyayı WebView'de göster
+    private fun openFileInWebView(filePath: String) {
+        try {
+            val uri = Uri.parse(filePath)
+            val fileExtension = filePath.substringAfterLast('.', "").lowercase()
+            
+            when (fileExtension) {
+                "pdf" -> showPdfInWebView(uri)
+                "ppt", "pptx" -> showOfficeFileInWebView(uri, "presentation")
+                "doc", "docx" -> showOfficeFileInWebView(uri, "document")
+                "xls", "xlsx" -> showOfficeFileInWebView(uri, "spreadsheet")
+                "txt", "html", "htm" -> showTextFileInWebView(uri)
+                "jpg", "jpeg", "png", "gif", "bmp" -> showImageInWebView(uri)
+                else -> showUnsupportedFileMessage(fileExtension)
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Dosya açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showPdfInWebView(uri: Uri) {
+        // PDF için Google Docs viewer kullan
+        val pdfUrl = "https://docs.google.com/gview?embedded=true&url=$uri"
+        webView.loadUrl(pdfUrl)
+    }
+
+    private fun showOfficeFileInWebView(uri: Uri, fileType: String) {
+        // Office dosyaları için Google Docs viewer kullan
+        val officeUrl = "https://docs.google.com/gview?embedded=true&url=$uri"
+        webView.loadUrl(officeUrl)
+    }
+
+    private fun showTextFileInWebView(uri: Uri) {
+        try {
+            val content = getFileContentAsString(uri.toString())
+            val htmlContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                        body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            background: white;
+                            color: black;
+                            line-height: 1.6;
+                        }
+                        .container {
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        pre { 
+                            white-space: pre-wrap; 
+                            word-wrap: break-word; 
+                            background: #f8f9fa;
+                            padding: 20px;
+                            border-radius: 8px;
+                            border: 1px solid #dee2e6;
+                        }
+                        .file-info {
+                            background: #007bff;
+                            color: white;
+                            padding: 10px 15px;
+                            border-radius: 5px;
+                            margin-bottom: 15px;
+                            display: inline-block;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="file-info">📝 Metin Belgesi</div>
+                        <pre>${content.replace("<", "&lt;").replace(">", "&gt;")}</pre>
+                    </div>
+                </body>
+                </html>
+            """.trimIndent()
+            
+            webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Metin dosyası okunamadı", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun showImageInWebView(uri: Uri) {
+        val htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { 
+                        margin: 0; 
+                        padding: 20px; 
+                        background: white;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                        flex-direction: column;
+                    }
+                    .file-info {
+                        background: #28a745;
+                        color: white;
+                        padding: 10px 15px;
+                        border-radius: 5px;
+                        margin-bottom: 15px;
+                    }
+                    img { 
+                        max-width: 100%; 
+                        height: auto; 
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="file-info">🖼️ Resim Dosyası</div>
+                <img src="$uri" alt="Image">
+            </body>
+            </html>
+        """.trimIndent()
+        
+        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+    }
+
+    private fun showUnsupportedFileMessage(fileExtension: String) {
+        val htmlContent = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        padding: 40px; 
+                        background: white;
+                        color: black;
+                        text-align: center;
+                    }
+                    .container {
+                        max-width: 500px;
+                        margin: 0 auto;
+                    }
+                    .message { 
+                        background: #f8f9fa; 
+                        padding: 30px; 
+                        border-radius: 12px; 
+                        border: 1px solid #dee2e6;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                    }
+                    .icon {
+                        font-size: 48px;
+                        margin-bottom: 15px;
+                    }
+                    h3 {
+                        color: #dc3545;
+                        margin-bottom: 15px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="message">
+                        <div class="icon">❌</div>
+                        <h3>Desteklenmeyen Dosya Türü</h3>
+                        <p><strong>.$fileExtension</strong> dosyalarını görüntüleyemiyoruz.</p>
+                        <p>Bu dosyayı açmak için harici bir uygulama kullanmanız gerekebilir.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+        
+        webView.loadDataWithBaseURL(null, htmlContent, "text/html", "UTF-8", null)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         
@@ -210,7 +424,13 @@ class MainActivity : AppCompatActivity() {
             val results = when {
                 resultCode == RESULT_OK && data != null -> {
                     val uri = data.data
-                    if (uri != null) arrayOf(uri) else null
+                    if (uri != null) {
+                        // Seçilen dosyayı hemen aç
+                        openFileInWebView(uri.toString())
+                        arrayOf(uri)
+                    } else {
+                        null
+                    }
                 }
                 else -> null
             }
